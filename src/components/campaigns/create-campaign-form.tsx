@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { contacts } from '@/lib/data';
 import {
-  CalendarIcon, Loader2, Sparkles, AlertTriangle, Paperclip, FileText, Video, Image as ImageIcon, Music
+  CalendarIcon, Loader2, Sparkles, AlertTriangle, Paperclip, FileText, Video, Image as ImageIcon, Music, MessageSquare
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { handleOptimizeMessage } from '@/app/actions';
@@ -45,22 +45,27 @@ import { Checkbox } from '../ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';
 import { PhonePreview } from './phone-preview';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const formSchema = z.object({
   name: z.string().min(5, { message: 'O nome da campanha deve ter pelo menos 5 caracteres.' }),
   contactSegment: z.string().min(1, { message: 'Por favor, selecione um segmento de contato.' }),
-  message: z.string().min(10, { message: 'A mensagem deve ter pelo menos 10 caracteres.' }),
+  message: z.string().optional(),
   sendSpeed: z.string().default('safe'),
   liabilityAccepted: z.boolean().refine((val) => val === true, {
     message: 'Você deve aceitar os termos de responsabilidade para continuar.',
   }),
   media: z.any().optional(),
+}).refine(data => data.message || data.media, {
+    message: "A campanha precisa ter uma mensagem ou um anexo de mídia.",
+    path: ['message'],
 });
 
 export function CreateCampaignForm() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] =
     useState<OptimizeMessageContentOutput | null>(null);
+  const [messageType, setMessageType] = useState('text');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -90,6 +95,13 @@ export function CreateCampaignForm() {
         setFileName('');
     }
   }, [mediaFile]);
+  
+  useEffect(() => {
+    // Clear media when switching back to text tab
+    if (messageType === 'text') {
+      setValue('media', null);
+    }
+  }, [messageType, setValue]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     toast({
@@ -137,6 +149,85 @@ export function CreateCampaignForm() {
         }, 0)
     }
   };
+  
+  const MediaUploadSlot = ({ type }: { type: 'media' | 'audio' | 'doc' }) => (
+    <FormField
+      control={form.control}
+      name="media"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Anexo</FormLabel>
+          <FormControl>
+            <div className="relative">
+                <Input 
+                    type="file" 
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={(e) => field.onChange(e.target.files ? e.target.files[0] : null)}
+                    accept={
+                        type === 'media' ? 'image/*,video/*' :
+                        type === 'audio' ? 'audio/*' :
+                        type === 'doc' ? '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx' : '*'
+                    }
+                />
+                <div className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-md text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                    {fileName ? (
+                        <p>{fileName}</p>
+                    ) : (
+                        <div className='text-center space-y-1'>
+                            { type === 'media' && <ImageIcon className="mx-auto h-8 w-8" /> }
+                            { type === 'audio' && <Music className="mx-auto h-8 w-8" /> }
+                            { type === 'doc' && <FileText className="mx-auto h-8 w-8" /> }
+                            <p className='text-sm'>
+                                {
+                                    type === 'media' ? 'Clique para anexar Imagem ou Vídeo' :
+                                    type === 'audio' ? 'Clique para anexar um Áudio' :
+                                    'Clique para anexar um Documento'
+                                }
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+  
+  const MessageSlot = ({label = "Mensagem", placeholder = "Olá [Nome], confira nossas novidades...", isOptional=false}) => (
+    <FormField
+        control={form.control}
+        name="message"
+        render={({ field }) => (
+        <FormItem>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+                <FormLabel>{label} {isOptional && <span className='text-muted-foreground text-xs'>(Opcional)</span>}</FormLabel>
+                <div className="flex items-center gap-2">
+                    <span className='text-xs text-muted-foreground'>Inserir variável:</span>
+                    <Button type="button" variant="outline" size="sm" className="h-7 px-2" onClick={() => handleVariableInsert('Nome')}>[Nome]</Button>
+                    <Button type="button" variant="outline" size="sm" className="h-7 px-2" onClick={() => handleVariableInsert('Telefone')}>[Telefone]</Button>
+                </div>
+            </div>
+            <FormControl>
+            <Textarea
+                placeholder={placeholder}
+                className="min-h-[120px] resize-y"
+                {...field}
+                ref={textareaRef}
+            />
+            </FormControl>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+                <FormMessage />
+                <Button type="button" variant="outline" size="sm" onClick={onOptimize} disabled={isOptimizing || !messageValue}>
+                    {isOptimizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Otimizar com IA
+                </Button>
+            </div>
+        </FormItem>
+        )}
+    />
+  )
 
   const contactSegments = ['Todos', ...Array.from(new Set(contacts.map((c) => c.segment)))];
   const recipientCount = watch('contactSegment') === 'Todos' 
@@ -203,69 +294,31 @@ export function CreateCampaignForm() {
             <Card>
               <CardHeader>
                 <CardTitle>2. Compositor de Mensagem</CardTitle>
-                <CardDescription>Crie a mensagem perfeita e adicione mídias.</CardDescription>
+                <CardDescription>Escolha o formato e crie o conteúdo da sua campanha.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                 <FormField
-                    control={form.control}
-                    name="message"
-                    render={({ field }) => (
-                    <FormItem>
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <FormLabel>Mensagem</FormLabel>
-                            <div className="flex items-center gap-2">
-                                <span className='text-xs text-muted-foreground'>Inserir variável:</span>
-                                <Button type="button" variant="outline" size="sm" className="h-7 px-2" onClick={() => handleVariableInsert('Nome')}>[Nome]</Button>
-                                <Button type="button" variant="outline" size="sm" className="h-7 px-2" onClick={() => handleVariableInsert('Telefone')}>[Telefone]</Button>
-                            </div>
-                        </div>
-                        <FormControl>
-                        <Textarea
-                            placeholder="Olá [Nome], confira nossas novidades..."
-                            className="min-h-[180px] resize-y"
-                            {...field}
-                            ref={textareaRef}
-                        />
-                        </FormControl>
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <FormMessage />
-                            <Button type="button" variant="outline" size="sm" onClick={onOptimize} disabled={isOptimizing}>
-                                {isOptimizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                                Otimizar com IA
-                            </Button>
-                        </div>
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                  control={form.control}
-                  name="media"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Anexos de Mídia</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                            <Input 
-                                type="file" 
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={(e) => field.onChange(e.target.files ? e.target.files[0] : null)}
-                            />
-                            <div className="flex items-center justify-center w-full h-24 border-2 border-dashed rounded-md text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-                                {fileName ? (
-                                    <p>{fileName}</p>
-                                ) : (
-                                    <div className='text-center space-y-1'>
-                                        <Paperclip className="mx-auto h-6 w-6" />
-                                        <p className='text-sm'>Clique para anexar Imagem, Vídeo, Áudio ou PDF</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                 <Tabs defaultValue="text" className="w-full" onValueChange={setMessageType}>
+                    <TabsList className="grid w-full grid-cols-4">
+                        <TabsTrigger value="text"><MessageSquare className="mr-2 h-4 w-4"/>Texto</TabsTrigger>
+                        <TabsTrigger value="media"><ImageIcon className="mr-2 h-4 w-4"/>Imagem/Vídeo</TabsTrigger>
+                        <TabsTrigger value="audio"><Music className="mr-2 h-4 w-4"/>Áudio</TabsTrigger>
+                        <TabsTrigger value="document"><FileText className="mr-2 h-4 w-4"/>Documento</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="text" className='pt-4'>
+                        <MessageSlot />
+                    </TabsContent>
+                    <TabsContent value="media" className='pt-4 space-y-4'>
+                        <MediaUploadSlot type="media" />
+                        <MessageSlot label="Legenda" placeholder="Digite uma legenda opcional..." isOptional />
+                    </TabsContent>
+                    <TabsContent value="audio" className='pt-4 space-y-4'>
+                         <MediaUploadSlot type="audio" />
+                    </TabsContent>
+                    <TabsContent value="document" className='pt-4 space-y-4'>
+                        <MediaUploadSlot type="doc" />
+                        <MessageSlot label="Legenda" placeholder="Digite uma legenda opcional..." isOptional />
+                    </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 
