@@ -2,16 +2,16 @@ import type { Campaign, Contact } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export const contacts: Contact[] = [
-  { id: '1', name: 'Ana Silva', phone: '+55 11 98765-4321', segment: 'VIP', createdAt: '2023-01-15', avatarUrl: PlaceHolderImages[0].imageUrl },
-  { id: '2', name: 'Bruno Costa', phone: '+55 21 91234-5678', segment: 'New', createdAt: '2023-02-20', avatarUrl: PlaceHolderImages[1].imageUrl },
+  { id: '1', name: 'Ana Silva', phone: '+55 11 98765-4321', segment: 'VIP', createdAt: '2023-01-15', avatarUrl: PlaceHolderImages[0].imageUrl, birthday: '1990-05-20' },
+  { id: '2', name: 'Bruno Costa', phone: '+55 21 91234-5678', segment: 'New', createdAt: '2023-02-20', avatarUrl: PlaceHolderImages[1].imageUrl, birthday: '1985-11-12' },
   { id: '3', name: 'Carla Dias', phone: '+55 31 99999-8888', segment: 'Regular', createdAt: '2022-11-30', avatarUrl: PlaceHolderImages[2].imageUrl },
-  { id: '4', name: 'Daniel Alves', phone: '+55 41 98888-7777', segment: 'VIP', createdAt: '2023-03-10', avatarUrl: PlaceHolderImages[3].imageUrl },
+  { id: '4', name: 'Daniel Alves', phone: '+55 41 98888-7777', segment: 'VIP', createdAt: '2023-03-10', avatarUrl: PlaceHolderImages[3].imageUrl, birthday: '1992-09-03' },
   { id: '5', name: 'Eduarda Lima', phone: '+55 51 97777-6666', segment: 'Inactive', createdAt: '2022-09-05', avatarUrl: PlaceHolderImages[4].imageUrl },
   { id: '6', name: 'Fábio Pereira', phone: '+55 61 96666-5555', segment: 'New', createdAt: '2023-04-01', avatarUrl: PlaceHolderImages[5].imageUrl },
-  { id: '7', name: 'Gabriela Santos', phone: '+55 71 95555-4444', segment: 'Regular', createdAt: '2023-01-25', avatarUrl: PlaceHolderImages[6].imageUrl },
+  { id: '7', name: 'Gabriela Santos', phone: '+55 71 95555-4444', segment: 'Regular', createdAt: '2023-01-25', avatarUrl: PlaceHolderImages[6].imageUrl, birthday: '1998-03-15' },
   { id: '8', name: 'Heitor Martins', phone: '+55 81 94444-3333', segment: 'VIP', createdAt: '2022-12-18', avatarUrl: PlaceHolderImages[7].imageUrl },
   { id: '9', name: 'Isabela Rocha', phone: '+55 91 93333-2222', segment: 'Regular', createdAt: '2023-03-22', avatarUrl: PlaceHolderImages[8].imageUrl },
-  { id: '10', name: 'João Mendes', phone: '+55 11 92222-1111', segment: 'New', createdAt: '2023-04-12', avatarUrl: PlaceHolderImages[9].imageUrl },
+  { id: '10', name: 'João Mendes', phone: '+55 11 92222-1111', segment: 'New', createdAt: '2023-04-12', avatarUrl: PlaceHolderImages[9].imageUrl, birthday: '2000-12-25' },
 ];
 
 export const campaigns: Campaign[] = [

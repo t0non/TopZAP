@@ -5,6 +5,7 @@ export type Contact = {
   segment: 'VIP' | 'New' | 'Regular' | 'Inactive';
   createdAt: string;
   avatarUrl: string;
+  birthday?: string;
 };
 
 export type Campaign = {
