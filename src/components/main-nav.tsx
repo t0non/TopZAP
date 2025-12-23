@@ -18,7 +18,7 @@ const navItems = [
   {
     href: '/dashboard',
     icon: LayoutDashboard,
-    label: 'Painel de Controle',
+    label: 'Painel',
   },
   {
     href: '/campaigns',
