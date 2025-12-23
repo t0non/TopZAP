@@ -12,6 +12,7 @@ import {
   Send,
   Users,
   Settings,
+  ShieldCheck,
 } from 'lucide-react';
 
 const navItems = [
@@ -29,6 +30,11 @@ const navItems = [
     href: '/contacts',
     icon: Users,
     label: 'Contatos',
+  },
+  {
+    href: '/safety',
+    icon: ShieldCheck,
+    label: 'Segurança',
   },
   {
     href: '/settings',

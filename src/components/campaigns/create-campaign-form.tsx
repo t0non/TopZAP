@@ -48,6 +48,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '../ui/dialog';
+import { Checkbox } from '../ui/checkbox';
 
 const formSchema = z.object({
   name: z.string().min(5, { message: 'O nome da campanha deve ter pelo menos 5 caracteres.' }),
@@ -55,6 +56,9 @@ const formSchema = z.object({
   message: z.string().min(10, { message: 'A mensagem deve ter pelo menos 10 caracteres.' }),
   sendDate: z.date({
     required_error: 'A data de envio é obrigatória.',
+  }),
+  liabilityAccepted: z.boolean().refine((val) => val === true, {
+    message: 'Você deve aceitar os termos de responsabilidade para enviar a campanha.',
   }),
 });
 
@@ -69,8 +73,11 @@ export function CreateCampaignForm() {
       name: '',
       contactSegment: '',
       message: '',
+      liabilityAccepted: false,
     },
   });
+
+  const liabilityAccepted = form.watch('liabilityAccepted');
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     toast({
@@ -226,9 +233,34 @@ export function CreateCampaignForm() {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="liabilityAccepted"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Termo de Responsabilidade
+                      </FormLabel>
+                      <FormDescription>
+                        Estou ciente de que o uso massivo para contatos frios (spam) viola os termos do WhatsApp e assumo o risco de bloqueio do número. Confirmo que estes contatos aceitaram receber minhas mensagens.
+                      </FormDescription>
+                       <FormMessage className='pt-2' />
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+
               <div className="flex justify-end gap-2">
                 <Button variant="ghost">Salvar como Rascunho</Button>
-                <Button type="submit">Agendar Campanha</Button>
+                <Button type="submit" disabled={!liabilityAccepted}>Agendar Campanha</Button>
               </div>
             </form>
           </Form>
