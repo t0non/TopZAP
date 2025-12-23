@@ -2,7 +2,7 @@ export type Contact = {
   id: string;
   name: string;
   phone: string;
-  segment: 'VIP' | 'New' | 'Regular' | 'Inactive';
+  segment: 'Regular' | 'VIP' | 'Inactive' | 'New';
   createdAt: string;
   avatarUrl: string;
   birthday?: string;

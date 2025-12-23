@@ -25,9 +25,9 @@ import {
 } from '@/components/ui/select';
 import { contacts } from '@/lib/data';
 import {
-  CalendarIcon, Loader2, Sparkles, AlertTriangle, Paperclip, FileText, Video, Image as ImageIcon, Music, MessageSquare
+  CalendarIcon, Loader2, Sparkles, AlertTriangle, Paperclip, FileText, Video, Image as ImageIcon, Music, MessageSquare, Users, Star, Cake, ShieldX, Globe
 } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { handleOptimizeMessage } from '@/app/actions';
 import type { OptimizeMessageContentOutput } from '@/ai/flows/optimize-message-content';
 import { toast } from '@/hooks/use-toast';
@@ -46,6 +46,8 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';
 import { PhonePreview } from './phone-preview';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const formSchema = z.object({
   name: z.string().min(5, { message: 'O nome da campanha deve ter pelo menos 5 caracteres.' }),
@@ -71,7 +73,7 @@ export function CreateCampaignForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      contactSegment: '',
+      contactSegment: 'all',
       message: '',
       sendSpeed: 'safe',
       liabilityAccepted: false,
@@ -83,10 +85,30 @@ export function CreateCampaignForm() {
   const sendSpeedValue = watch('sendSpeed');
   const mediaFile = watch('media');
   const liabilityAccepted = watch('liabilityAccepted');
+  const selectedSegment = watch('contactSegment');
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [fileName, setFileName] = useState('');
+
+  const recipientCount = useMemo(() => {
+    const activeContacts = contacts.filter(c => c.segment !== 'Inactive');
+    switch (selectedSegment) {
+        case 'all':
+            return activeContacts.length;
+        case 'vip':
+            return activeContacts.filter(c => c.segment === 'VIP').length;
+        case 'regular':
+            return activeContacts.filter(c => c.segment === 'Regular' || c.segment === 'New').length;
+        case 'birthday_month':
+            const currentMonth = new Date().getMonth();
+            return activeContacts.filter(c => c.birthday && new Date(c.birthday).getMonth() === currentMonth).length;
+        default:
+            return 0;
+    }
+  }, [selectedSegment]);
+
+  const blockedCount = contacts.filter(c => c.segment === 'Inactive').length;
 
   useEffect(() => {
     if (mediaFile) {
@@ -229,11 +251,6 @@ export function CreateCampaignForm() {
     />
   )
 
-  const contactSegments = ['Todos', ...Array.from(new Set(contacts.map((c) => c.segment)))];
-  const recipientCount = watch('contactSegment') === 'Todos' 
-    ? contacts.length 
-    : contacts.filter(c => c.segment === watch('contactSegment')).length;
-
   return (
     <>
       <Form {...form}>
@@ -242,8 +259,8 @@ export function CreateCampaignForm() {
           <div className="lg:col-span-2 space-y-8">
             <Card>
               <CardHeader>
-                <CardTitle>1. Identificação e Destinatários</CardTitle>
-                <CardDescription>Dê um nome à sua campanha e escolha quem irá recebê-la.</CardDescription>
+                <CardTitle>1. Para quem vamos mandar?</CardTitle>
+                <CardDescription>Escolha o grupo de pessoas que receberá sua mensagem.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -259,31 +276,60 @@ export function CreateCampaignForm() {
                     </FormItem>
                   )}
                 />
-                <FormField
+                 <FormField
                   control={form.control}
                   name="contactSegment"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Segmento de Contatos</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel>Grupo de Destinatários</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione um segmento" />
-                          </SelectTrigger>
+                            <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2"
+                            >
+                                <Label className={cn("border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary transition-all", field.value === 'all' && 'border-primary ring-2 ring-primary')}>
+                                    <RadioGroupItem value="all" className="sr-only" />
+                                    <Globe className="w-8 h-8"/>
+                                    <span className="font-bold text-center">Todos os Contatos</span>
+                                    <span className="text-xs text-muted-foreground">Enviar para toda a base.</span>
+                                </Label>
+                                <Label className={cn("border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary transition-all", field.value === 'regular' && 'border-primary ring-2 ring-primary')}>
+                                    <RadioGroupItem value="regular" className="sr-only" />
+                                    <Users className="w-8 h-8"/>
+                                    <span className="font-bold text-center">Clientes</span>
+                                     <span className="text-xs text-muted-foreground">Pessoas que já compraram.</span>
+                                </Label>
+                                 <Label className={cn("border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-yellow-500 transition-all", field.value === 'vip' && 'border-yellow-500 ring-2 ring-yellow-500 text-yellow-600')}>
+                                    <RadioGroupItem value="vip" className="sr-only" />
+                                    <Star className="w-8 h-8"/>
+                                    <span className="font-bold text-center">Clientes VIP</span>
+                                     <span className="text-xs text-muted-foreground">Seus melhores compradores.</span>
+                                </Label>
+                                <Label className={cn("border-2 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-pink-500 transition-all", field.value === 'birthday_month' && 'border-pink-500 ring-2 ring-pink-500 text-pink-600')}>
+                                    <RadioGroupItem value="birthday_month" className="sr-only" />
+                                    <Cake className="w-8 h-8"/>
+                                    <span className="font-bold text-center">Aniversariantes</span>
+                                     <span className="text-xs text-muted-foreground">Do mês atual.</span>
+                                </Label>
+                            </RadioGroup>
                         </FormControl>
-                        <SelectContent>
-                          {contactSegments.map((segment) => (
-                            <SelectItem key={segment} value={segment}>
-                              {segment}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                      {field.value && (
-                        <FormDescription>
-                          Esta campanha será enviada para <strong>{recipientCount}</strong> pessoas.
-                        </FormDescription>
+                        <FormMessage />
+                        {selectedSegment && (
+                        <div className='space-y-2 pt-2'>
+                          <FormDescription>
+                            Esta campanha será enviada para <strong>{recipientCount}</strong> pessoas.
+                          </FormDescription>
+                          {blockedCount > 0 && (
+                            <Alert variant="default" className="bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400 [&>svg]:text-blue-700 dark:[&>svg]:text-blue-400">
+                              <ShieldX className="h-4 w-4" />
+                              <AlertTitle>Proteção Automática</AlertTitle>
+                              <AlertDescription>
+                                Removemos automaticamente <strong>{blockedCount}</strong> contato(s) da sua lista de bloqueio para este envio.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
                       )}
                     </FormItem>
                   )}

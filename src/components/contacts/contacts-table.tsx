@@ -28,7 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '../ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Star } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { ContactForm } from './contact-form';
 import { useToast } from '@/hooks/use-toast';
@@ -130,16 +130,21 @@ export function ContactsTable() {
       },
       {
         accessorKey: "segment",
-        header: "Segmento",
+        header: "Grupo",
         cell: ({ row }) => {
           const segment = row.getValue("segment") as string;
+          const segmentMap = {
+            'VIP': { label: 'Cliente VIP', className: 'border-yellow-500 text-yellow-600' },
+            'New': { label: 'Novo', className: 'border-blue-500 text-blue-600' },
+            'Regular': { label: 'Cliente', className: 'border-green-500 text-green-600' },
+            'Inactive': { label: 'Bloqueado', className: 'border-gray-500 text-gray-500 bg-gray-100' },
+          }
+          const currentSegment = segmentMap[segment as keyof typeof segmentMap] || { label: segment, className: '' };
           return (
-              <Badge variant="outline" className={cn(
-                  segment === 'VIP' && 'border-yellow-500 text-yellow-600',
-                  segment === 'New' && 'border-blue-500 text-blue-600',
-                  segment === 'Regular' && 'border-green-500 text-green-600',
-                  segment === 'Inactive' && 'border-gray-500 text-gray-600',
-              )}>{segment}</Badge>
+              <Badge variant="outline" className={cn(currentSegment.className)}>
+                {segment === 'VIP' && <Star className='mr-1 h-3 w-3' />}
+                {currentSegment.label}
+              </Badge>
           )
         },
       },
@@ -148,7 +153,7 @@ export function ContactsTable() {
         header: "Aniversário",
         cell: ({ row }) => {
             const birthday = row.getValue("birthday") as string;
-            return birthday ? new Date(birthday).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }) : '-';
+            return birthday ? new Date(birthday).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', timeZone: 'UTC' }) : '-';
         }
       },
       {

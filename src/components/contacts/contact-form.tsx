@@ -1,5 +1,5 @@
 'use client';
-import * as React from 'react';
+import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -126,18 +126,18 @@ export function ContactForm({ isOpen, onOpenChange, contact, onSave }: ContactFo
                   name="segment"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Segmento</FormLabel>
+                      <FormLabel>Grupo</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione um segmento" />
+                            <SelectValue placeholder="Selecione um grupo" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="New">Novo</SelectItem>
-                          <SelectItem value="Regular">Regular</SelectItem>
-                          <SelectItem value="VIP">VIP</SelectItem>
-                          <SelectItem value="Inactive">Inativo</SelectItem>
+                          <SelectItem value="Regular">Cliente</SelectItem>
+                          <SelectItem value="VIP">Cliente VIP</SelectItem>
+                          <SelectItem value="Inactive">Bloqueado</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
