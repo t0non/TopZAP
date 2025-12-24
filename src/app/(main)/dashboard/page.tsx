@@ -68,7 +68,10 @@ export default function DashboardPage() {
             try {
                 const tourCompleted = localStorage.getItem(LOCAL_STORAGE_KEY);
                 if (!tourCompleted) {
-                    startTutorial();
+                    // Use a small delay to ensure the UI is mounted and ready.
+                    setTimeout(() => {
+                        startTutorial();
+                    }, 500);
                 }
             } catch (error) {
                 console.warn("Could not access localStorage. Welcome tour will not be shown automatically.", error);

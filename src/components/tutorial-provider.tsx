@@ -5,7 +5,8 @@ import React, { createContext, useState, useContext, ReactNode, useCallback } fr
 const LOCAL_STORAGE_KEY = 'welcomeTourCompleted';
 
 interface TutorialContextType {
-  isTourOpen: boolean;
+  isTourRunning: boolean;
+  runTour: (run: boolean) => void;
   startTutorial: () => void;
   completeTutorial: () => void;
 }
@@ -13,10 +14,10 @@ interface TutorialContextType {
 const TutorialContext = createContext<TutorialContextType | undefined>(undefined);
 
 export function TutorialProvider({ children }: { children: ReactNode }) {
-  const [isTourOpen, setIsTourOpen] = useState(false);
+  const [isTourRunning, setIsTourRunning] = useState(false);
 
   const startTutorial = useCallback(() => {
-    setIsTourOpen(true);
+    setIsTourRunning(true);
   }, []);
 
   const completeTutorial = useCallback(() => {
@@ -25,11 +26,11 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn("Could not access localStorage to save tour state.", error);
     }
-    setIsTourOpen(false);
+    setIsTourRunning(false);
   }, []);
 
   return (
-    <TutorialContext.Provider value={{ isTourOpen, startTutorial, completeTutorial }}>
+    <TutorialContext.Provider value={{ isTourRunning, runTour: setIsTourRunning, startTutorial, completeTutorial }}>
       {children}
     </TutorialContext.Provider>
   );
