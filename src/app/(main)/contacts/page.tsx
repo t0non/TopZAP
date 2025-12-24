@@ -12,6 +12,40 @@ import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, addDoc, collection, writeBatch, getDocs, query } from 'firebase/firestore';
 import { DeleteAllContactsDialog } from '@/components/contacts/delete-all-contacts-dialog';
 
+// Função para formatar o número de telefone para o padrão de 12 dígitos (55+DDD+XXXXYYYY)
+const formatPhoneNumberForDB = (phone: string | undefined | null): string => {
+    if (!phone) return '';
+    
+    // 1. Remove tudo que não for dígito
+    let cleaned = phone.replace(/\D/g, '');
+
+    // 2. Garante que começa com 55 (código do Brasil)
+    if (!cleaned.startsWith('55')) {
+        // Se não tem 55 mas parece um número completo (10 ou 11 dígitos), adiciona
+        if (cleaned.length === 10 || cleaned.length === 11) {
+            cleaned = '55' + cleaned;
+        } else {
+            // Caso contrário, não é um formato reconhecível, retorna o número limpo como está
+            return cleaned;
+        }
+    }
+    
+    // 3. Verifica se tem o nono dígito e remove (números de celular no Brasil)
+    // Formato com 9º dígito: 55 (DDD: 2 dígitos) (9º: 1 dígito) (Número: 8 dígitos) -> Total 13 dígitos
+    if (cleaned.length === 13) {
+        const ddd = cleaned.substring(2, 4);
+        const numberPart = cleaned.substring(4); // Pega a parte do número
+        if (numberPart.startsWith('9')) {
+             // Remove o primeiro '9' da parte do número
+             cleaned = '55' + ddd + numberPart.substring(1);
+        }
+    }
+    
+    // O número final deve ter 12 dígitos (55+DDD+XXXXXXXX)
+    return cleaned;
+};
+
+
 export default function ContactsPage() {
   const { toast } = useToast();
   const { user } = useUser();
@@ -36,21 +70,24 @@ export default function ContactsPage() {
         return;
     }
 
+    const formattedPhone = formatPhoneNumberForDB(contactData.phone);
+    const dataToSave = { ...contactData, phone: formattedPhone };
+
     try {
-        if (contactData.id) {
+        if (dataToSave.id) {
             // Edit existing contact
-            const contactRef = doc(firestore, 'users', user.uid, 'contacts', contactData.id);
-            await setDoc(contactRef, contactData, { merge: true });
-            toast({ title: "Contato atualizado!", description: `${contactData.name} foi atualizado com sucesso.` });
+            const contactRef = doc(firestore, 'users', user.uid, 'contacts', dataToSave.id);
+            await setDoc(contactRef, dataToSave, { merge: true });
+            toast({ title: "Contato atualizado!", description: `${dataToSave.name} foi atualizado com sucesso.` });
         } else {
             // Add new contact
             const newContact: Omit<Contact, 'id' | 'avatarUrl'> = {
                 userId: user.uid,
-                name: contactData.name || '',
-                phone: contactData.phone || '',
-                segment: contactData.segment || 'New',
+                name: dataToSave.name || '',
+                phone: dataToSave.phone || '',
+                segment: dataToSave.segment || 'New',
                 createdAt: new Date(),
-                birthday: contactData.birthday
+                birthday: dataToSave.birthday
             };
             await addDoc(collection(firestore, 'users', user.uid, 'contacts'), newContact);
             toast({ title: "Contato criado!", description: `${newContact.name} foi adicionado à sua lista.` });
@@ -64,7 +101,7 @@ export default function ContactsPage() {
     }
   };
   
-  const handleBatchImport = async (contacts: Omit<Contact, 'id' | 'userId' | 'createdAt' | 'avatarUrl'>[]) => {
+  const handleBatchImport = async (contacts: Omit<Contact, 'id' | 'userId' | 'createdAt' | 'avatarUrl' | 'phone'> & { phone: string }[]) => {
     if (!user) {
         toast({ title: "Erro", description: "Você precisa estar logado.", variant: "destructive" });
         return;
@@ -73,10 +110,11 @@ export default function ContactsPage() {
     const batch = writeBatch(firestore);
     
     contacts.forEach(contactData => {
+        const formattedPhone = formatPhoneNumberForDB(contactData.phone);
         const newContact: Omit<Contact, 'id' | 'avatarUrl'> = {
             userId: user.uid,
             name: contactData.name || '',
-            phone: contactData.phone || '',
+            phone: formattedPhone,
             segment: 'New',
             createdAt: new Date(),
         };
