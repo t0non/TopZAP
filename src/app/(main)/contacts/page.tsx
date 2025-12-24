@@ -11,11 +11,13 @@ import type { Contact } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { contacts as defaultData } from '@/lib/data';
+import { ImportContactsDialog } from '@/components/contacts/import-contacts-dialog';
 
 export default function ContactsPage() {
   const { toast } = useToast();
   const [data, setData] = React.useState<Contact[]>(() => [...defaultData]);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
   const [contactToEdit, setContactToEdit] = React.useState<Contact | null>(null);
   const [filter, setFilter] = React.useState('all');
 
@@ -38,6 +40,22 @@ export default function ContactsPage() {
     setContactToEdit(null);
     setIsFormOpen(false);
   };
+
+  const handleImportContacts = (newContacts: Omit<Contact, 'avatarUrl' | 'createdAt' | 'id'>[]) => {
+    const contactsWithIds = newContacts.map(contact => ({
+        ...contact,
+        id: uuidv4(),
+        createdAt: new Date().toISOString(),
+        avatarUrl: PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl,
+        segment: 'New' as const,
+    }));
+    setData(prev => [...contactsWithIds, ...prev]);
+    toast({
+        title: `${contactsWithIds.length} contatos importados!`,
+        description: "Os novos contatos foram adicionados à sua lista.",
+    });
+    setIsImportOpen(false);
+};
 
   const handleEditRequest = (contact: Contact) => {
     setContactToEdit(contact);
@@ -66,7 +84,7 @@ export default function ContactsPage() {
           </PageHeaderDescription>
         </div>
         <PageHeaderActions>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setIsImportOpen(true)}>
                 <Upload className="mr-2 h-4 w-4" />
                 Importar Contatos
             </Button>
@@ -96,6 +114,12 @@ export default function ContactsPage() {
         }}
         contact={contactToEdit}
         onSave={handleSaveContact}
+      />
+
+      <ImportContactsDialog
+        isOpen={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onImport={handleImportContacts}
       />
     </div>
   );
