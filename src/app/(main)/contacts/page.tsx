@@ -8,7 +8,6 @@ import { ContactForm } from '@/components/contacts/contact-form';
 import { CsvImportWizard } from '@/components/contacts/csv-import-wizard';
 import { useToast } from '@/hooks/use-toast';
 import type { Contact } from '@/lib/types';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { doc, setDoc, addDoc, collection, writeBatch, getDocs, query } from 'firebase/firestore';
 import { DeleteAllContactsDialog } from '@/components/contacts/delete-all-contacts-dialog';
@@ -46,13 +45,12 @@ export default function ContactsPage() {
             toast({ title: "Contato atualizado!", description: `${contactData.name} foi atualizado com sucesso.` });
         } else {
             // Add new contact
-            const newContact: Omit<Contact, 'id'> = {
+            const newContact: Omit<Contact, 'id' | 'avatarUrl'> = {
                 userId: user.uid,
                 name: contactData.name || '',
                 phone: contactData.phone || '',
                 segment: contactData.segment || 'New',
                 createdAt: new Date(),
-                avatarUrl: PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl,
                 birthday: contactData.birthday
             };
             await addDoc(collection(firestore, 'users', user.uid, 'contacts'), newContact);
@@ -75,13 +73,12 @@ export default function ContactsPage() {
     const batch = writeBatch(firestore);
     
     contacts.forEach(contactData => {
-        const newContact: Omit<Contact, 'id'> = {
+        const newContact: Omit<Contact, 'id' | 'avatarUrl'> = {
             userId: user.uid,
             name: contactData.name || '',
             phone: contactData.phone || '',
             segment: 'New',
             createdAt: new Date(),
-            avatarUrl: PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl,
         };
         const contactRef = doc(collection(firestore, 'users', user.uid, 'contacts'));
         batch.set(contactRef, newContact);

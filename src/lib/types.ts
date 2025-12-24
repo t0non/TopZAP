@@ -5,7 +5,7 @@ export type Contact = {
   phone: string;
   segment: 'Regular' | 'VIP' | 'Inactive' | 'New';
   createdAt: any; // Can be string or Firestore Timestamp
-  avatarUrl: string;
+  avatarUrl?: string;
   birthday?: string;
 };
 

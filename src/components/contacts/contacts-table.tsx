@@ -31,11 +31,10 @@ import { MoreHorizontal, Star, Ban, Users, Crown, FilterX, Loader2 } from 'lucid
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase/provider';
 
 interface ContactsTableProps {
-    data: Contact[];
     onEditRequest: (contact: Contact) => void;
     filter: string;
     setFilter: (filter: string) => void;
@@ -68,16 +67,73 @@ export function ContactsTable({ onEditRequest, filter, setFilter }: Omit<Contact
     const { user } = useUser();
     const firestore = useFirestore();
 
-    const contactsQuery = useMemoFirebase(() => {
-        if (!user) return null;
-        return query(collection(firestore, 'users', user.uid, 'contacts'), orderBy('createdAt', 'desc'));
-    }, [firestore, user]);
-
-    const { data: contacts, isLoading } = useCollection<Contact>(contactsQuery);
+    const [contacts, setContacts] = React.useState<Contact[]>([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [lastDoc, setLastDoc] = React.useState<QueryDocumentSnapshot | null>(null);
+    const [hasMore, setHasMore] = React.useState(true);
     
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
     const [contactToDelete, setContactToDelete] = React.useState<Contact | null>(null);
+    const tableContainerRef = React.useRef<HTMLDivElement>(null);
+    const [isFetchingMore, setIsFetchingMore] = React.useState(false);
+
+
+    const loadMoreContacts = React.useCallback(async () => {
+        if (!user || !hasMore || isFetchingMore) return;
+        
+        setIsFetchingMore(true);
+        let q;
+        const contactsRef = collection(firestore, 'users', user.uid, 'contacts');
+
+        if (lastDoc) {
+            q = query(contactsRef, orderBy("name"), startAfter(lastDoc), limit(50));
+        } else {
+            q = query(contactsRef, orderBy("name"), limit(50));
+        }
+
+        try {
+            const documentSnapshots = await getDocs(q);
+            const newContacts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
+            
+            setContacts(prev => lastDoc ? [...prev, ...newContacts] : newContacts);
+
+            const lastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+            setLastDoc(lastVisible);
+            
+            if (documentSnapshots.docs.length < 50) {
+                setHasMore(false);
+            }
+        } catch (error) {
+            console.error("Error fetching contacts:", error);
+            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os contatos." });
+        } finally {
+            setIsLoading(false);
+            setIsFetchingMore(false);
+        }
+    }, [user, firestore, lastDoc, hasMore, isFetchingMore, toast]);
+
+    React.useEffect(() => {
+        // Reset and load initial data when user changes
+        setContacts([]);
+        setLastDoc(null);
+        setHasMore(true);
+        setIsLoading(true);
+        if (user) {
+            loadMoreContacts();
+        }
+    }, [user]); // Only user is a dependency here, loadMoreContacts is memoized
+
+     const handleScroll = React.useCallback(() => {
+        const container = tableContainerRef.current;
+        if (container) {
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            // Load more when user is 100px from the bottom
+            if (scrollHeight - scrollTop - clientHeight < 100 && !isFetchingMore && hasMore) {
+                loadMoreContacts();
+            }
+        }
+    }, [loadMoreContacts, isFetchingMore, hasMore]);
     
     const handleDeleteRequest = (contact: Contact) => {
         setContactToDelete(contact);
@@ -87,6 +143,7 @@ export function ContactsTable({ onEditRequest, filter, setFilter }: Omit<Contact
         if (contactToDelete && user) {
             try {
                 await deleteDoc(doc(firestore, 'users', user.uid, 'contacts', contactToDelete.id));
+                 setContacts(prev => prev.filter(c => c.id !== contactToDelete.id));
                 toast({ title: "Contato removido", description: `${contactToDelete.name} foi removido da sua lista.` });
             } catch (error) {
                 console.error("Error deleting contact: ", error);
@@ -173,7 +230,6 @@ export function ContactsTable({ onEditRequest, filter, setFilter }: Omit<Contact
     data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
@@ -188,7 +244,7 @@ export function ContactsTable({ onEditRequest, filter, setFilter }: Omit<Contact
     }
   });
 
-  if (isLoading) {
+  if (isLoading && contacts.length === 0) {
     return (
       <div className="flex items-center justify-center rounded-md border h-96">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -214,9 +270,14 @@ export function ContactsTable({ onEditRequest, filter, setFilter }: Omit<Contact
                 )}
             </div>
         </div>
-      <div className="rounded-md border">
+      <div 
+        className="rounded-md border overflow-y-auto relative" 
+        style={{ height: 'calc(100vh - 350px)' }}
+        ref={tableContainerRef}
+        onScroll={handleScroll}
+      >
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-background z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
@@ -261,26 +322,24 @@ export function ContactsTable({ onEditRequest, filter, setFilter }: Omit<Contact
                 </TableCell>
               </TableRow>
             )}
+            {isFetchingMore && (
+                <TableRow>
+                    <TableCell colSpan={columns.length} className="text-center">
+                        <div className="flex justify-center items-center p-4">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                    </TableCell>
+                </TableRow>
+            )}
+             {!hasMore && contacts.length > 0 && (
+                <TableRow>
+                    <TableCell colSpan={columns.length} className="text-center text-muted-foreground p-4">
+                        Fim da lista.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Anterior
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Próximo
-        </Button>
       </div>
 
       <AlertDialog open={!!contactToDelete} onOpenChange={() => setContactToDelete(null)}>
