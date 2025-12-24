@@ -15,11 +15,24 @@ import { ImportContactsDialog } from '@/components/contacts/import-contacts-dial
 
 export default function ContactsPage() {
   const { toast } = useToast();
-  const [data, setData] = React.useState<Contact[]>(() => [...defaultData]);
+  const [data, setData] = React.useState<Contact[]>([]);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isImportOpen, setIsImportOpen] = React.useState(false);
   const [contactToEdit, setContactToEdit] = React.useState<Contact | null>(null);
   const [filter, setFilter] = React.useState('all');
+
+  React.useEffect(() => {
+    const storedContacts = localStorage.getItem('contacts');
+    if (storedContacts) {
+      setData(JSON.parse(storedContacts));
+    } else {
+      setData([...defaultData]);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(data));
+  }, [data]);
 
   const handleSaveContact = (contactData: Omit<Contact, 'avatarUrl' | 'createdAt' | 'id'> & {id?: string}) => {
     if (contactData.id) {

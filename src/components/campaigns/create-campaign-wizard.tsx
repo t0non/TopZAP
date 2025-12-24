@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui
 import {
   Loader2, Sparkles, AlertTriangle, Users, Star, Cake, ShieldX, ArrowLeft, Send
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { handleOptimizeMessage } from '@/app/actions';
 import type { OptimizeMessageContentOutput } from '@/ai/flows/optimize-message-content';
@@ -36,11 +36,11 @@ import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { PhonePreview } from './phone-preview';
 import { cn } from '@/lib/utils';
-import { contacts } from '@/lib/data';
+import { contacts as defaultContacts } from '@/lib/data';
 import { MessageComposer } from './message-composer';
 import { SpeedSelector } from './speed-selector';
 import { v4 as uuidv4 } from 'uuid';
-
+import type { Contact } from '@/lib/types';
 
 const formSchema = z.object({
   name: z.string().min(5, { message: 'O nome da campanha deve ter pelo menos 5 caracteres.' }),
@@ -70,6 +70,12 @@ export function CreateCampaignWizard() {
     const [optimizationResult, setOptimizationResult] = useState<OptimizeMessageContentOutput | null>(null);
     const [submitError, setSubmitError] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [contacts, setContacts] = useState<Contact[]>([]);
+
+    useEffect(() => {
+        const storedContacts = localStorage.getItem('contacts');
+        setContacts(storedContacts ? JSON.parse(storedContacts) : defaultContacts);
+    }, []);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -171,9 +177,9 @@ export function CreateCampaignWizard() {
             default:
                 return 0;
         }
-    }, [contactSegment]);
+    }, [contactSegment, contacts]);
 
-    const blockedCount = contacts.filter(c => c.segment === 'Inactive').length;
+    const blockedCount = useMemo(() => contacts.filter(c => c.segment === 'Inactive').length, [contacts]);
 
   return (
     <>

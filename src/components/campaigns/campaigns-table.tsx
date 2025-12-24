@@ -103,10 +103,18 @@ export const columns: ColumnDef<Campaign>[] = [
 
 export function CampaignsTable() {
     const [data, setData] = React.useState<Campaign[]>(() => {
-        // In a real app, you'd fetch this from a server
+        if (typeof window === 'undefined') {
+            return [...defaultData];
+        }
         const storedCampaigns = localStorage.getItem('campaigns');
         return storedCampaigns ? JSON.parse(storedCampaigns) : defaultData;
     });
+    
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('campaigns', JSON.stringify(data));
+        }
+    }, [data]);
 
     const [highlightedRow, setHighlightedRow] = React.useState<string | null>(null);
     const [sorting, setSorting] = React.useState<SortingState>([])
@@ -120,9 +128,8 @@ export function CampaignsTable() {
             // Re-fetch or update data
             const storedCampaigns = localStorage.getItem('campaigns');
             const allCampaigns = storedCampaigns ? JSON.parse(storedCampaigns) : defaultData;
-            const combinedData = [...allCampaigns.filter((c: Campaign) => !defaultData.some(dc => dc.id === c.id)), ...defaultData];
-            const uniqueCampaigns = Array.from(new Set(combinedData.map(c => c.id))).map(id => combinedData.find(c => c.id === id));
-            setData(uniqueCampaigns as Campaign[]);
+            
+            setData(allCampaigns);
 
             setHighlightedRow(newId);
             sessionStorage.removeItem('newlyCreatedCampaignId');
