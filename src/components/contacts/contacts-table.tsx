@@ -63,6 +63,22 @@ const ActionsCell = ({ row, onEdit, onDelete }: { row: Row<Contact>, onEdit: (co
     );
 };
 
+const formatPhoneNumber = (phone: string) => {
+  const cleaned = ('' + phone).replace(/\D/g, '');
+  const match = cleaned.match(/^(\d{2})(\d{2})(\d{4,5})(\d{4})$/);
+  if (match) {
+    // match[1] is country code (55)
+    // match[2] is DDD
+    // match[3] is first part of number
+    // match[4] is second part of number
+    const ddd = match[2];
+    const firstPart = match[3];
+    const secondPart = match[4];
+    return `(${ddd}) ${firstPart}-${secondPart}`;
+  }
+  return phone;
+};
+
 export function ContactsTable({ onEditRequest, onDelete, filter, setFilter, importCounter }: ContactsTableProps) {
     const { toast } = useToast();
     const { user } = useUser();
@@ -101,22 +117,6 @@ export function ContactsTable({ onEditRequest, onDelete, filter, setFilter, impo
         
         let queries: QueryConstraint[] = [];
 
-        // Name filter
-        if (nameFilter) {
-            const normalizedFilter = nameFilter.toLowerCase();
-            const capitalizedFilter = normalizedFilter.charAt(0).toUpperCase() + normalizedFilter.slice(1);
-            
-            const endLower = normalizedFilter.replace(/.$/, c => String.fromCharCode(c.charCodeAt(0) + 1));
-            const endCapitalized = capitalizedFilter.replace(/.$/, c => String.fromCharCode(c.charCodeAt(0) + 1));
-
-            queries.push(
-                or(
-                    where('name', '>=', normalizedFilter),
-                    where('name', '>=', capitalizedFilter)
-                )
-            );
-        }
-
         // Segment filter
         if (filter !== 'all') {
             const segmentMap = {
@@ -128,6 +128,14 @@ export function ContactsTable({ onEditRequest, onDelete, filter, setFilter, impo
         
         queries.push(orderBy('name'));
         
+        // Name filter
+        if (nameFilter) {
+            const normalizedFilter = nameFilter.toLowerCase();
+            const endStr = normalizedFilter.slice(0, -1) + String.fromCharCode(normalizedFilter.charCodeAt(normalizedFilter.length - 1) + 1);
+            queries.push(where('name', '>=', normalizedFilter));
+            queries.push(where('name', '<', endStr));
+        }
+
         if (lastDoc) {
             queries.push(startAfter(lastDoc));
         }
@@ -219,7 +227,7 @@ export function ContactsTable({ onEditRequest, onDelete, filter, setFilter, impo
       {
         accessorKey: "phone",
         header: "Telefone",
-        cell: ({ row }) => row.getValue('phone')
+        cell: ({ row }) => formatPhoneNumber(row.getValue('phone'))
       },
       {
         accessorKey: "segment",
