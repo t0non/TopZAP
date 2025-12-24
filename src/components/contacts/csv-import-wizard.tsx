@@ -35,7 +35,7 @@ interface CsvImportWizardProps {
   onImport: (contacts: { name: string; phone: string }[]) => void;
 }
 
-const PHONE_REGEX = /^\+?[1-9]\d{1,14}$/; // E.164 format-ish
+const PHONE_REGEX = /^55\d{10,11}$/; // Starts with 55, followed by 10 or 11 digits (DDD + number)
 
 export function CsvImportWizard({ isOpen, onOpenChange, onImport }: CsvImportWizardProps) {
   const [step, setStep] = useState(1);
@@ -87,7 +87,7 @@ export function CsvImportWizard({ isOpen, onOpenChange, onImport }: CsvImportWiz
       if (name && phone) {
         phone = phone.replace(/\D/g, ''); // Remove non-digit characters
         if (PHONE_REGEX.test(phone)) {
-            valid.push({ name, phone });
+            valid.push({ name, phone: `+${phone}` });
         } else {
             invalidCount++;
         }
@@ -199,7 +199,7 @@ export function CsvImportWizard({ isOpen, onOpenChange, onImport }: CsvImportWiz
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Contatos Inválidos</AlertTitle>
                     <AlertDescription>
-                        Foram ignorados <strong>{invalidContactsCount} contatos</strong> por falta de nome ou telefone inválido.
+                        Foram ignorados <strong>{invalidContactsCount} contatos</strong> por falta de nome ou telefone inválido (fora do padrão 55+DDD+Número).
                     </AlertDescription>
                 </Alert>
             )}
