@@ -36,6 +36,8 @@ interface ContactsTableProps {
     onEditRequest: (contact: Contact) => void;
     onDelete: () => void;
     importCounter: number;
+    filter: string;
+    setFilter: (filter: string) => void;
 }
 
 const ActionsCell = ({ row, onEdit, onDelete }: { row: Row<Contact>, onEdit: (contact: Contact) => void, onDelete: (contact: Contact) => void }) => {
@@ -72,7 +74,7 @@ const formatPhoneNumber = (phone: string) => {
   return phone;
 };
 
-export function ContactsTable({ onEditRequest, onDelete, importCounter }: ContactsTableProps) {
+export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, setFilter }: ContactsTableProps) {
     const { toast } = useToast();
     const { user } = useUser();
     const firestore = useFirestore();
@@ -84,30 +86,29 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter }: Contac
     
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-    const [filter, setFilter] = React.useState('all');
     
     const [contactToDelete, setContactToDelete] = React.useState<Contact | null>(null);
     const tableContainerRef = React.useRef<HTMLDivElement>(null);
     const [isFetchingMore, setIsFetchingMore] = React.useState(false);
 
-    const nameFilter = columnFilters.find(f => f.id === 'name')?.value as string || '';
+    const nameFilter = (table.getColumn("name")?.getFilterValue() as string) ?? "";
 
-    const resetAndLoad = React.useCallback(() => {
+    const resetAndLoad = React.useCallback((showLoader = true) => {
         setAllContacts([]);
         setLastDoc(null);
         setHasMore(true);
-        setIsLoading(true);
+        setIsLoading(showLoader);
     }, []);
 
     React.useEffect(() => {
         resetAndLoad();
-    }, [filter, importCounter, nameFilter, user, resetAndLoad]);
+    }, [filter, importCounter, user, resetAndLoad]);
 
-    const loadMoreContacts = React.useCallback(async (isSearch = false) => {
-        if (!user || (!isSearch && !hasMore) || isFetchingMore) return;
+    const loadMoreContacts = React.useCallback(async () => {
+        if (!user || !hasMore || isFetchingMore) return;
         
         setIsFetchingMore(true);
-        if(!isSearch) setIsLoading(true);
+        if (!lastDoc) setIsLoading(true);
 
         const contactsRef = collection(firestore, 'users', user.uid, 'contacts');
         let queries: QueryConstraint[] = [];
@@ -122,14 +123,14 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter }: Contac
         
         if (nameFilter) {
             const endStr = nameFilter.slice(0, -1) + String.fromCharCode(nameFilter.charCodeAt(nameFilter.length - 1) + 1);
-            queries.push(where('name', '>=', nameFilter.charAt(0).toUpperCase() + nameFilter.slice(1)));
-            queries.push(where('name', '<', endStr.charAt(0).toUpperCase() + endStr.slice(1)));
+            queries.push(where('name', '>=', nameFilter));
+            queries.push(where('name', '<', endStr));
             queries.push(orderBy('name'));
         } else {
              queries.push(orderBy('name'));
         }
 
-        if (lastDoc && !isSearch) {
+        if (lastDoc && !nameFilter) { // only paginate if not searching
             queries.push(startAfter(lastDoc));
         }
         
@@ -141,17 +142,18 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter }: Contac
             const documentSnapshots = await getDocs(q);
             const newContacts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
 
-            if (isSearch) {
-                const lowerCaseSearchContacts = newContacts.filter(c => c.name.toLowerCase().startsWith(nameFilter.toLowerCase()));
-                setAllContacts(lowerCaseSearchContacts);
-            } else {
-                setAllContacts(prev => lastDoc ? [...prev, ...newContacts] : newContacts);
-            }
+            const finalContacts = newContacts.filter(c => c.name.toLowerCase().startsWith(nameFilter.toLowerCase()));
 
+            if (nameFilter) {
+                 setAllContacts(finalContacts);
+            } else {
+                 setAllContacts(prev => lastDoc ? [...prev, ...finalContacts] : finalContacts);
+            }
+           
             const lastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
             setLastDoc(lastVisible);
             
-            if (documentSnapshots.docs.length < 50 || isSearch) {
+            if (documentSnapshots.docs.length < 50 || nameFilter) {
                 setHasMore(false);
             }
         } catch (error) {
@@ -164,9 +166,14 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter }: Contac
     }, [user, firestore, lastDoc, hasMore, isFetchingMore, toast, filter, nameFilter]);
 
     React.useEffect(() => {
-        const isSearch = !!nameFilter;
-        loadMoreContacts(isSearch);
-    }, [filter, importCounter, user, nameFilter]);
+        resetAndLoad();
+    }, [nameFilter]);
+    
+    React.useEffect(() => {
+        if (isLoading) {
+            loadMoreContacts();
+        }
+    }, [isLoading, loadMoreContacts]);
 
 
      const handleScroll = React.useCallback(() => {
@@ -275,7 +282,6 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter }: Contac
       sorting,
       columnFilters,
     },
-    manualFiltering: true, // Let our server/useEffect handle filtering
     meta: {
         onEdit: onEditRequest,
         onDelete: handleDeleteRequest,
