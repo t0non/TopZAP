@@ -69,7 +69,7 @@ export const PhonePreview: React.FC<PhonePreviewProps> = ({ message, media }) =>
     ));
 
   return (
-    <div className="w-full max-w-[300px] mx-auto bg-white border-[10px] border-black rounded-[40px] shadow-2xl overflow-hidden">
+    <div className="w-full max-w-[300px] mx-auto bg-white dark:bg-slate-900 border-[10px] border-black rounded-[40px] shadow-2xl overflow-hidden">
       <div className="h-[550px] bg-gray-100 dark:bg-gray-800 overflow-y-auto">
         <div className="p-4 flex flex-col space-y-2">
             {/* Fake received message */}
