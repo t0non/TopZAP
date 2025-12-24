@@ -1,5 +1,5 @@
 'use client';
-
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -13,9 +13,27 @@ import { Button } from '@/components/ui/button';
 import { CreditCard, LogOut, Settings, User } from 'lucide-react';
 import { useSidebar } from './ui/sidebar';
 import { cn } from '@/lib/utils';
+import { Skeleton } from './ui/skeleton';
 
 export function UserMenu() {
   const { state } = useSidebar();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return (
+        <div className="flex items-center gap-2 p-2">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <div className={cn('flex flex-col items-start space-y-1', state === 'collapsed' ? 'hidden' : 'flex')}>
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-3 w-28" />
+            </div>
+        </div>
+    );
+  }
   
   return (
     <DropdownMenu>
