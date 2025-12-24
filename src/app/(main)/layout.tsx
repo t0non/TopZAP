@@ -11,7 +11,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarHeader>
             <Logo />
           </SidebarHeader>
-          <SidebarContent>
+          <SidebarContent className="p-2">
             <MainNav />
           </SidebarContent>
           <SidebarFooter>

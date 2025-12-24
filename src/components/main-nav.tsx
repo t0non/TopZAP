@@ -13,6 +13,7 @@ import {
   Users,
   Settings,
   ShieldCheck,
+  QrCode,
 } from 'lucide-react';
 
 const navItems = [
@@ -30,6 +31,11 @@ const navItems = [
     href: '/contacts',
     icon: Users,
     label: 'Contatos',
+  },
+  {
+    href: '/whatsapp-connect',
+    icon: QrCode,
+    label: 'Conectar',
   },
   {
     href: '/safety',
