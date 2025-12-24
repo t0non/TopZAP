@@ -72,20 +72,9 @@ const savingsThisMonth = (totalSentThisMonth * costPerMessage).toFixed(2).replac
 
 
 const Greeting = () => {
-    const [greeting, setGreeting] = React.useState('');
-
-    React.useEffect(() => {
-        const hour = new Date().getHours();
-        if (hour < 12) {
-            setGreeting('Bom dia! ☀️ Vamos vender hoje?');
-        } else if (hour < 18) {
-            setGreeting('Boa tarde! ☕ Vamos vender hoje?');
-        } else {
-            setGreeting('Boa noite! 🌙');
-        }
-    }, []);
-
-    return <PageHeaderHeading>{greeting}</PageHeaderHeading>;
+    // Hardcoded user name for now.
+    const userName = "Usuário";
+    return <PageHeaderHeading>Olá, {userName}.</PageHeaderHeading>;
 }
 
 
@@ -287,3 +276,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

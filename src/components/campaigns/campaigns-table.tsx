@@ -27,6 +27,7 @@ import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '../ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
+import Link from 'next/link';
 
 export const columns: ColumnDef<Campaign>[] = [
     {
@@ -77,6 +78,7 @@ export const columns: ColumnDef<Campaign>[] = [
     {
         id: "actions",
         cell: ({ row }) => {
+          const campaign = row.original;
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -86,7 +88,9 @@ export const columns: ColumnDef<Campaign>[] = [
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Ver Relatório</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/campaigns/${campaign.id}`}>Ver Relatório</Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem>Duplicar Campanha</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive">Arquivar</DropdownMenuItem>
