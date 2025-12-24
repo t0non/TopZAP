@@ -30,7 +30,7 @@ import { MoreHorizontal, Star, Ban, Users, Crown, FilterX, Loader2 } from 'lucid
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, deleteDoc, doc, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, where, QueryConstraint, endAt, startAt } from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot, where, QueryConstraint } from 'firebase/firestore';
 
 interface ContactsTableProps {
     onEditRequest: (contact: Contact) => void;
@@ -91,6 +91,10 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, 
     const tableContainerRef = React.useRef<HTMLDivElement>(null);
     const [isFetchingMore, setIsFetchingMore] = React.useState(false);
     
+    const handleDeleteRequest = (contact: Contact) => {
+      setContactToDelete(contact);
+    };
+
     const columns: ColumnDef<Contact>[] = [
       {
         accessorKey: "name",
@@ -178,12 +182,18 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, 
       setAllContacts([]);
       setLastDoc(null);
       setHasMore(true);
-      setIsLoading(showLoader);
+      if(showLoader) setIsLoading(true);
   }, []);
 
   React.useEffect(() => {
+      if(!nameFilter) {
+        resetAndLoad();
+      }
+  }, [nameFilter, resetAndLoad]);
+  
+  React.useEffect(() => {
       resetAndLoad();
-  }, [filter, importCounter, user, resetAndLoad]);
+  }, [filter, importCounter, user]);
 
   const loadMoreContacts = React.useCallback(async (isSearch = false) => {
       if (!user || (!isSearch && !hasMore) || isFetchingMore) return;
@@ -204,6 +214,8 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, 
       
       if (nameFilter) {
           const searchLower = nameFilter.toLowerCase();
+          const searchCapitalized = nameFilter.charAt(0).toUpperCase() + nameFilter.slice(1).toLowerCase();
+
           queries.push(where('name', '>=', nameFilter));
           queries.push(where('name', '<=', nameFilter + '\uf8ff'));
       }
@@ -222,14 +234,18 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, 
           const documentSnapshots = await getDocs(q);
           const newContacts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
 
-          setAllContacts(prev => isSearch || !lastDoc ? newContacts : [...prev, ...newContacts]);
+          setAllContacts(prev => {
+            if (isSearch || !lastDoc) return newContacts;
+            const existingIds = new Set(prev.map(c => c.id));
+            const uniqueNewContacts = newContacts.filter(c => !existingIds.has(c.id));
+            return [...prev, ...uniqueNewContacts];
+          });
          
           const lastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
           setLastDoc(lastVisible);
           
-          if (documentSnapshots.docs.length < 50) {
-              setHasMore(false);
-          }
+          setHasMore(documentSnapshots.docs.length >= 50);
+
       } catch (error) {
           console.error("Error fetching contacts:", error);
           toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os contatos." });
@@ -241,22 +257,18 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, 
   
   React.useEffect(() => {
     const handler = setTimeout(() => {
+      if (nameFilter) {
         setAllContacts([]);
         setLastDoc(null);
         setHasMore(true);
-        loadMoreContacts(!!nameFilter);
-    }, 500);
+        loadMoreContacts(true);
+      }
+    }, 300);
 
     return () => {
         clearTimeout(handler);
     };
-  }, [nameFilter]);
-
-  React.useEffect(() => {
-    if (!nameFilter) {
-      resetAndLoad();
-    }
-  }, [nameFilter, resetAndLoad]);
+  }, [nameFilter, loadMoreContacts]);
   
   React.useEffect(() => {
       if (isLoading && !nameFilter) {
@@ -266,19 +278,15 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, 
 
 
    const handleScroll = React.useCallback(() => {
-      if (nameFilter) return; // Disable infinite scroll during search
+      if (nameFilter) return; 
       const container = tableContainerRef.current;
       if (container) {
           const { scrollTop, scrollHeight, clientHeight } = container;
-          if (scrollHeight - scrollTop - clientHeight < 100 && !isFetchingMore && hasMore) {
+          if (scrollHeight - scrollTop - clientHeight < 200 && !isFetchingMore && hasMore) {
               loadMoreContacts();
           }
       }
   }, [loadMoreContacts, isFetchingMore, hasMore, nameFilter]);
-  
-  const handleDeleteRequest = (contact: Contact) => {
-      setContactToDelete(contact);
-  };
 
   const handleDeleteConfirm = async () => {
       if (contactToDelete && user) {
@@ -340,7 +348,7 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, 
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading && allContacts.length === 0 ? (
+            {isLoading ? (
                  <TableRow>
                     <TableCell colSpan={columns.length} className="h-96 text-center">
                         <div className="flex justify-center items-center h-full">
