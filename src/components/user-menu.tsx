@@ -30,30 +30,36 @@ export function UserMenu() {
           variant="ghost"
           className="flex w-full items-center justify-start gap-2 p-2"
         >
-          <div className={cn('relative', !isClient && 'opacity-0')}>
+          <div className="relative">
             <Avatar className="h-8 w-8">
               <AvatarImage src="https://picsum.photos/seed/user/40/40" alt="User" />
               <AvatarFallback>U</AvatarFallback>
             </Avatar>
-          </div>
-           {!isClient && (
-             <div className="absolute left-2 top-2 flex items-center gap-2 p-0">
+            {/* Skeleton is rendered but hidden on client */}
+            <div className={cn("absolute inset-0 flex items-center gap-2 p-0", isClient ? "hidden" : "flex")}>
                 <Skeleton className="h-8 w-8 rounded-full" />
              </div>
-           )}
+          </div>
+          
 
           <div className={cn('flex flex-col items-start', state === 'collapsed' ? 'hidden' : 'flex')}>
-            <div className={cn('relative', !isClient && 'opacity-0')}>
+            <div className="relative">
                 <span className="text-sm font-medium">Usuário</span>
+                {/* Skeleton is rendered but hidden on client */}
+                <div className={cn("absolute inset-0", isClient ? "hidden" : "block")}>
+                    <Skeleton className="h-4 w-20 mb-1" />
+                </div>
             </div>
-            {!isClient && <Skeleton className="h-4 w-20 mb-1" />}
             
-            <div className={cn('relative', !isClient && 'opacity-0')}>
+            <div className="relative">
                 <span className="text-xs text-muted-foreground">
                     user@example.com
                 </span>
+                {/* Skeleton is rendered but hidden on client */}
+                <div className={cn("absolute inset-0", isClient ? "hidden" : "block")}>
+                    <Skeleton className="h-3 w-28" />
+                </div>
             </div>
-             {!isClient && <Skeleton className="h-3 w-28" />}
           </div>
         </Button>
       </DropdownMenuTrigger>
