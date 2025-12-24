@@ -90,122 +90,6 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, 
     const [contactToDelete, setContactToDelete] = React.useState<Contact | null>(null);
     const tableContainerRef = React.useRef<HTMLDivElement>(null);
     const [isFetchingMore, setIsFetchingMore] = React.useState(false);
-
-    const nameFilter = (table.getColumn("name")?.getFilterValue() as string) ?? "";
-
-    const resetAndLoad = React.useCallback((showLoader = true) => {
-        setAllContacts([]);
-        setLastDoc(null);
-        setHasMore(true);
-        setIsLoading(showLoader);
-    }, []);
-
-    React.useEffect(() => {
-        resetAndLoad();
-    }, [filter, importCounter, user, resetAndLoad]);
-
-    const loadMoreContacts = React.useCallback(async () => {
-        if (!user || !hasMore || isFetchingMore) return;
-        
-        setIsFetchingMore(true);
-        if (!lastDoc) setIsLoading(true);
-
-        const contactsRef = collection(firestore, 'users', user.uid, 'contacts');
-        let queries: QueryConstraint[] = [];
-
-        if (filter !== 'all') {
-            const segmentMap = {
-                'vip': 'VIP',
-                'blocked': 'Inactive',
-            };
-            queries.push(where('segment', '==', segmentMap[filter as keyof typeof segmentMap]));
-        }
-        
-        if (nameFilter) {
-            const endStr = nameFilter.slice(0, -1) + String.fromCharCode(nameFilter.charCodeAt(nameFilter.length - 1) + 1);
-            queries.push(where('name', '>=', nameFilter));
-            queries.push(where('name', '<', endStr));
-            queries.push(orderBy('name'));
-        } else {
-             queries.push(orderBy('name'));
-        }
-
-        if (lastDoc && !nameFilter) { // only paginate if not searching
-            queries.push(startAfter(lastDoc));
-        }
-        
-        queries.push(limit(50));
-
-        const q = query(contactsRef, ...queries);
-
-        try {
-            const documentSnapshots = await getDocs(q);
-            const newContacts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
-
-            const finalContacts = newContacts.filter(c => c.name.toLowerCase().startsWith(nameFilter.toLowerCase()));
-
-            if (nameFilter) {
-                 setAllContacts(finalContacts);
-            } else {
-                 setAllContacts(prev => lastDoc ? [...prev, ...finalContacts] : finalContacts);
-            }
-           
-            const lastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-            setLastDoc(lastVisible);
-            
-            if (documentSnapshots.docs.length < 50 || nameFilter) {
-                setHasMore(false);
-            }
-        } catch (error) {
-            console.error("Error fetching contacts:", error);
-            toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os contatos." });
-        } finally {
-            setIsLoading(false);
-            setIsFetchingMore(false);
-        }
-    }, [user, firestore, lastDoc, hasMore, isFetchingMore, toast, filter, nameFilter]);
-
-    React.useEffect(() => {
-        resetAndLoad();
-    }, [nameFilter]);
-    
-    React.useEffect(() => {
-        if (isLoading) {
-            loadMoreContacts();
-        }
-    }, [isLoading, loadMoreContacts]);
-
-
-     const handleScroll = React.useCallback(() => {
-        if (nameFilter) return; // Disable infinite scroll during search
-        const container = tableContainerRef.current;
-        if (container) {
-            const { scrollTop, scrollHeight, clientHeight } = container;
-            if (scrollHeight - scrollTop - clientHeight < 100 && !isFetchingMore && hasMore) {
-                loadMoreContacts();
-            }
-        }
-    }, [loadMoreContacts, isFetchingMore, hasMore, nameFilter]);
-    
-    const handleDeleteRequest = (contact: Contact) => {
-        setContactToDelete(contact);
-    };
-
-    const handleDeleteConfirm = async () => {
-        if (contactToDelete && user) {
-            try {
-                await deleteDoc(doc(firestore, 'users', user.uid, 'contacts', contactToDelete.id));
-                setAllContacts(prev => prev.filter(c => c.id !== contactToDelete.id));
-                toast({ title: "Contato removido", description: `${contactToDelete.name} foi removido da sua lista.` });
-                onDelete();
-            } catch (error) {
-                console.error("Error deleting contact: ", error);
-                toast({ variant: 'destructive', title: "Erro", description: "Não foi possível remover o contato." });
-            } finally {
-                setContactToDelete(null);
-            }
-        }
-    };
     
     const columns: ColumnDef<Contact>[] = [
       {
@@ -287,6 +171,130 @@ export function ContactsTable({ onEditRequest, onDelete, importCounter, filter, 
         onDelete: handleDeleteRequest,
     }
   });
+
+  const nameFilter = (table.getColumn("name")?.getFilterValue() as string) ?? "";
+
+  const resetAndLoad = React.useCallback((showLoader = true) => {
+      setAllContacts([]);
+      setLastDoc(null);
+      setHasMore(true);
+      setIsLoading(showLoader);
+  }, []);
+
+  React.useEffect(() => {
+      resetAndLoad();
+  }, [filter, importCounter, user, resetAndLoad]);
+
+  const loadMoreContacts = React.useCallback(async (isSearch = false) => {
+      if (!user || (!isSearch && !hasMore) || isFetchingMore) return;
+      
+      setIsFetchingMore(true);
+      if (!lastDoc && !isSearch) setIsLoading(true);
+
+      const contactsRef = collection(firestore, 'users', user.uid, 'contacts');
+      let queries: QueryConstraint[] = [];
+
+      if (filter !== 'all') {
+          const segmentMap = {
+              'vip': 'VIP',
+              'blocked': 'Inactive',
+          };
+          queries.push(where('segment', '==', segmentMap[filter as keyof typeof segmentMap]));
+      }
+      
+      if (nameFilter) {
+          const searchLower = nameFilter.toLowerCase();
+          queries.push(where('name', '>=', nameFilter));
+          queries.push(where('name', '<=', nameFilter + '\uf8ff'));
+      }
+      
+      queries.push(orderBy('name'));
+
+      if (lastDoc && !isSearch) {
+          queries.push(startAfter(lastDoc));
+      }
+      
+      queries.push(limit(50));
+
+      const q = query(contactsRef, ...queries);
+
+      try {
+          const documentSnapshots = await getDocs(q);
+          const newContacts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
+
+          setAllContacts(prev => isSearch || !lastDoc ? newContacts : [...prev, ...newContacts]);
+         
+          const lastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+          setLastDoc(lastVisible);
+          
+          if (documentSnapshots.docs.length < 50) {
+              setHasMore(false);
+          }
+      } catch (error) {
+          console.error("Error fetching contacts:", error);
+          toast({ variant: 'destructive', title: "Erro", description: "Não foi possível carregar os contatos." });
+      } finally {
+          setIsLoading(false);
+          setIsFetchingMore(false);
+      }
+  }, [user, firestore, lastDoc, hasMore, isFetchingMore, toast, filter, nameFilter]);
+  
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+        setAllContacts([]);
+        setLastDoc(null);
+        setHasMore(true);
+        loadMoreContacts(!!nameFilter);
+    }, 500);
+
+    return () => {
+        clearTimeout(handler);
+    };
+  }, [nameFilter]);
+
+  React.useEffect(() => {
+    if (!nameFilter) {
+      resetAndLoad();
+    }
+  }, [nameFilter, resetAndLoad]);
+  
+  React.useEffect(() => {
+      if (isLoading && !nameFilter) {
+          loadMoreContacts();
+      }
+  }, [isLoading, nameFilter, loadMoreContacts]);
+
+
+   const handleScroll = React.useCallback(() => {
+      if (nameFilter) return; // Disable infinite scroll during search
+      const container = tableContainerRef.current;
+      if (container) {
+          const { scrollTop, scrollHeight, clientHeight } = container;
+          if (scrollHeight - scrollTop - clientHeight < 100 && !isFetchingMore && hasMore) {
+              loadMoreContacts();
+          }
+      }
+  }, [loadMoreContacts, isFetchingMore, hasMore, nameFilter]);
+  
+  const handleDeleteRequest = (contact: Contact) => {
+      setContactToDelete(contact);
+  };
+
+  const handleDeleteConfirm = async () => {
+      if (contactToDelete && user) {
+          try {
+              await deleteDoc(doc(firestore, 'users', user.uid, 'contacts', contactToDelete.id));
+              setAllContacts(prev => prev.filter(c => c.id !== contactToDelete.id));
+              toast({ title: "Contato removido", description: `${contactToDelete.name} foi removido da sua lista.` });
+              onDelete();
+          } catch (error) {
+              console.error("Error deleting contact: ", error);
+              toast({ variant: 'destructive', title: "Erro", description: "Não foi possível remover o contato." });
+          } finally {
+              setContactToDelete(null);
+          }
+      }
+  };
 
   return (
     <>
