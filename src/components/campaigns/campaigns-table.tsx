@@ -102,11 +102,38 @@ export const columns: ColumnDef<Campaign>[] = [
   ];
 
 export function CampaignsTable() {
-    const [data] = React.useState(() => [...defaultData]);
+    const [data, setData] = React.useState<Campaign[]>(() => {
+        // In a real app, you'd fetch this from a server
+        const storedCampaigns = localStorage.getItem('campaigns');
+        return storedCampaigns ? JSON.parse(storedCampaigns) : defaultData;
+    });
+
+    const [highlightedRow, setHighlightedRow] = React.useState<string | null>(null);
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
       []
     )
+
+    React.useEffect(() => {
+        const newId = sessionStorage.getItem('newlyCreatedCampaignId');
+        if (newId) {
+            // Re-fetch or update data
+            const storedCampaigns = localStorage.getItem('campaigns');
+            const allCampaigns = storedCampaigns ? JSON.parse(storedCampaigns) : defaultData;
+            const combinedData = [...allCampaigns.filter((c: Campaign) => !defaultData.some(dc => dc.id === c.id)), ...defaultData];
+            const uniqueCampaigns = Array.from(new Set(combinedData.map(c => c.id))).map(id => combinedData.find(c => c.id === id));
+            setData(uniqueCampaigns as Campaign[]);
+
+            setHighlightedRow(newId);
+            sessionStorage.removeItem('newlyCreatedCampaignId');
+
+            const timer = setTimeout(() => {
+                setHighlightedRow(null);
+            }, 3000); // Animation duration
+
+            return () => clearTimeout(timer);
+        }
+    }, []);
 
   const table = useReactTable({
     data,
@@ -161,6 +188,7 @@ export function CampaignsTable() {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
+                  className={cn(row.original.id === highlightedRow && 'animate-pulse-bg')}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

@@ -18,6 +18,7 @@ import {
   Loader2, Sparkles, AlertTriangle, Users, Star, Cake, ShieldX, ArrowLeft, Send
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { handleOptimizeMessage } from '@/app/actions';
 import type { OptimizeMessageContentOutput } from '@/ai/flows/optimize-message-content';
 import { toast } from '@/hooks/use-toast';
@@ -38,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { contacts } from '@/lib/data';
 import { MessageComposer } from './message-composer';
 import { SpeedSelector } from './speed-selector';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const formSchema = z.object({
@@ -62,6 +64,7 @@ const steps = [
 ]
 
 export function CreateCampaignWizard() {
+    const router = useRouter();
     const [currentStep, setCurrentStep] = useState(0);
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [optimizationResult, setOptimizationResult] = useState<OptimizeMessageContentOutput | null>(null);
@@ -99,14 +102,31 @@ export function CreateCampaignWizard() {
         setIsSubmitting(true);
         console.log(values);
 
+        const newCampaign = {
+            id: uuidv4(),
+            name: values.name,
+            status: 'Sent',
+            sentDate: new Date().toISOString(),
+            recipients: recipientCount,
+            engagement: 0,
+        };
+
+        // Simulate API call
         setTimeout(() => {
             toast({
                 title: "Campanha Enviada para a Fila!",
                 description: `A campanha "${values.name}" foi iniciada com sucesso.`
             });
-            reset();
-            setCurrentStep(0);
-            setIsSubmitting(false);
+            // Store new campaign ID to be highlighted
+            sessionStorage.setItem('newlyCreatedCampaignId', newCampaign.id);
+
+            // Add campaign to mock data (since we don't have a real backend)
+            // In a real app, this would be handled by react-query/SWR refetching
+            const existingCampaigns = JSON.parse(localStorage.getItem('campaigns') || '[]');
+            localStorage.setItem('campaigns', JSON.stringify([newCampaign, ...existingCampaigns]));
+            
+            router.push('/campaigns');
+
         }, 1500);
     }
 
@@ -283,10 +303,10 @@ export function CreateCampaignWizard() {
                                     </FormControl>
                                     <div className="space-y-1 leading-none">
                                         <FormLabel>Prometo que esta lista de contatos me conhece e aceitou receber mensagens. Entendo o risco de bloqueio se abusar.</FormLabel>
-                                        <FormMessage className='pt-2' />
                                          {submitError && !field.value && (
                                             <p className="text-sm font-medium text-destructive pt-2">Você deve aceitar os termos para continuar.</p>
                                         )}
+                                        <FormMessage className='pt-2' />
                                     </div>
                                 </FormItem>
                              )} />
