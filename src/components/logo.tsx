@@ -13,7 +13,7 @@ export function Logo() {
       className="flex items-center justify-center gap-2.5 font-semibold text-foreground p-2"
     >
       <Image 
-        src="https://files.catbox.moe/1isrb2.png"
+        src="https://files.catbox.moe/w98d31.png"
         alt="TOPzap Logo"
         width={350}
         height={100}
