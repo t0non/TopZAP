@@ -32,18 +32,6 @@ export default function SettingsPage() {
             <Button>Salvar Alterações</Button>
           </CardContent>
         </Card>
-
-        <Separator />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Notificações</CardTitle>
-            <CardDescription>Gerencie como você recebe notificações.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Em breve...</p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

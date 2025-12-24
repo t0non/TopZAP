@@ -68,7 +68,7 @@ const Greeting = () => {
 
 
 const ConnectionStatus = () => {
-    const status = 'connected'; 
+    const status = 'disconnected'; 
 
     const statusConfig = {
         connected: {
@@ -82,7 +82,7 @@ const ConnectionStatus = () => {
             icon: <ServerCrash className="h-10 w-10 text-destructive" />,
             title: 'Conexão perdida',
             description: 'Não foi possível conectar ao WhatsApp. Suas campanhas estão pausadas.',
-            button: <Button><Power className="mr-2" /> Reconectar Agora</Button>,
+            button: <Button asChild><Link href="/whatsapp-connect"><Power className="mr-2" /> Conectar Agora</Link></Button>,
             cardClass: 'bg-destructive/10 border-destructive/50'
         },
         waiting: {

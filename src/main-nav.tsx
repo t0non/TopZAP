@@ -1,0 +1,73 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from '@/components/ui/sidebar';
+import {
+  LayoutDashboard,
+  Send,
+  Users,
+  Settings,
+  ShieldCheck,
+  QrCode,
+} from 'lucide-react';
+
+const navItems = [
+  {
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    label: 'Painel',
+  },
+  {
+    href: '/campaigns',
+    icon: Send,
+    label: 'Campanhas',
+  },
+  {
+    href: '/contacts',
+    icon: Users,
+    label: 'Contatos',
+  },
+  {
+    href: '/whatsapp-connect',
+    icon: QrCode,
+    label: 'Conectar',
+  },
+  {
+    href: '/safety',
+    icon: ShieldCheck,
+    label: 'Segurança',
+  },
+  {
+    href: '/settings',
+    icon: Settings,
+    label: 'Configurações',
+  },
+];
+
+export function MainNav() {
+  const pathname = usePathname();
+
+  return (
+    <SidebarMenu>
+      {navItems.map((item) => (
+        <SidebarMenuItem key={item.href}>
+          <SidebarMenuButton
+            asChild
+            isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
+            tooltip={item.label}
+          >
+            <Link href={item.href}>
+              <item.icon />
+              <span>{item.label}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  );
+}
