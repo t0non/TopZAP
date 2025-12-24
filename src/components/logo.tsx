@@ -13,7 +13,7 @@ export function Logo() {
       className="flex items-center gap-2.5 font-semibold text-foreground"
     >
       <Image 
-        src="/logo.png"
+        src="https://files.catbox.moe/1isrb2.png"
         alt="TOPzap Logo"
         width={140}
         height={40}
@@ -22,6 +22,7 @@ export function Logo() {
           state === 'collapsed' ? 'opacity-0 w-0' : 'opacity-100 w-auto'
         )}
         style={{ width: 'auto', height: '40px' }}
+        unoptimized
       />
     </Link>
   );
