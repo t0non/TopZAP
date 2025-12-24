@@ -43,19 +43,21 @@ const Greeting = () => {
     return <PageHeaderHeading>Olá, {userName}.</PageHeaderHeading>;
 }
 
-const StatCard: React.FC<{ title: string; value: string | number; description: string; icon: React.ReactNode; isError?: boolean, id?: string }> = ({ title, value, description, icon, isError, id }) => (
-    <Card id={id} className={`border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300 ${isError ? 'bg-destructive/10 border-destructive/50' : ''}`}>
-        <CardHeader className="pb-2">
-            <CardTitle className='flex items-center justify-between text-base'>
-                <span>{title}</span>
-                <div className={`h-5 w-5 ${isError ? 'text-destructive' : 'text-muted-foreground'}`}>{icon}</div>
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p className={`text-4xl font-bold tracking-tight text-slate-900 ${isError ? 'text-destructive' : ''}`}>{value}</p>
-            <p className='text-sm text-muted-foreground'>{description}</p>
-        </CardContent>
-    </Card>
+const StatCard: React.FC<{ title: string; value: string | number; description: string; icon: React.ReactNode; isError?: boolean, id?: string, gradient?: string }> = ({ title, value, description, icon, isError, id, gradient }) => (
+    <div id={id} className={`relative p-[2px] rounded-xl bg-gradient-to-r ${gradient || 'from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800'} shadow-sm hover:shadow-md transition-shadow duration-300`}>
+        <div className={`h-full w-full bg-card rounded-lg ${isError ? 'bg-destructive/10' : ''}`}>
+            <CardHeader className="pb-2">
+                <CardTitle className='flex items-center justify-between text-base'>
+                    <span>{title}</span>
+                    <div className={`h-5 w-5 ${isError ? 'text-destructive' : 'text-muted-foreground'}`}>{icon}</div>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className={`text-4xl font-bold tracking-tight ${isError ? 'text-destructive' : 'text-foreground'}`}>{value}</p>
+                <p className='text-sm text-muted-foreground'>{description}</p>
+            </CardContent>
+        </div>
+    </div>
 );
 
 export default function DashboardPage() {
@@ -107,26 +109,21 @@ export default function DashboardPage() {
       </PageHeader>
       
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div id="tour-stats-card" className="relative p-[2px] rounded-xl bg-gradient-to-r from-blue-400 to-green-300 shadow-sm hover:shadow-md transition-shadow duration-300">
-            <div className="h-full w-full bg-card rounded-lg">
-                <CardHeader className="pb-2">
-                    <CardTitle className='flex items-center justify-between text-base'>
-                        <span>Envios Hoje</span>
-                        <MessageSquareText className="h-5 w-5 text-muted-foreground" />
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-4xl font-bold tracking-tight text-slate-900">{dailyStats.sentToday}</p>
-                    <p className='text-sm text-muted-foreground'>Mensagens nas últimas 24h</p>
-                </CardContent>
-            </div>
-        </div>
+        <StatCard
+            id="tour-stats-card"
+            title="Envios Hoje"
+            value={dailyStats.sentToday}
+            description="Mensagens nas últimas 24h"
+            icon={<MessageSquareText />}
+            gradient="from-blue-400 to-green-300"
+        />
 
         <StatCard
             title="Fila de Espera"
             value={dailyStats.inQueue}
             description="Aguardando envio"
             icon={<Clock />}
+            gradient="from-yellow-400 to-orange-400"
         />
 
         <StatCard
@@ -135,21 +132,24 @@ export default function DashboardPage() {
             description="Falhas de envio hoje"
             icon={<XCircle />}
             isError={dailyStats.errorRate > 5}
+            gradient={dailyStats.errorRate > 5 ? "from-red-500 to-orange-500" : "from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800"}
         />
 
-        <Card className="border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-             <CardHeader className="pb-2">
-                <CardTitle className='flex items-center justify-between text-base'>
-                    <span>Limite de Segurança</span>
-                    <TriangleAlert className="h-5 w-5 text-muted-foreground" />
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-2xl font-bold mb-2 tracking-tight text-slate-900">{`${dailyStats.sentToday}/${dailyStats.dailyLimit}`}</p>
-                <Progress value={(dailyStats.sentToday / dailyStats.dailyLimit) * 100} className='h-3' />
-                 <p className='text-sm text-muted-foreground mt-2'>Cota de envios diária</p>
-            </CardContent>
-        </Card>
+        <div className="relative p-[2px] rounded-xl bg-gradient-to-r from-purple-400 to-indigo-400 shadow-sm hover:shadow-md transition-shadow duration-300">
+            <Card className="h-full w-full rounded-lg border-none">
+                 <CardHeader className="pb-2">
+                    <CardTitle className='flex items-center justify-between text-base'>
+                        <span>Limite de Segurança</span>
+                        <TriangleAlert className="h-5 w-5 text-muted-foreground" />
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-2xl font-bold mb-2 tracking-tight text-foreground">{`${dailyStats.sentToday}/${dailyStats.dailyLimit}`}</p>
+                    <Progress value={(dailyStats.sentToday / dailyStats.dailyLimit) * 100} className='h-3' />
+                     <p className='text-sm text-muted-foreground mt-2'>Cota de envios diária</p>
+                </CardContent>
+            </Card>
+        </div>
       </div>
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
