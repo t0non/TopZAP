@@ -18,7 +18,7 @@ const DayPicker = ({
   disabled?: (date: Date) => boolean;
   initialFocus?: boolean;
 }) => {
-  const { selected, onSelect } = props as any;
+  const { selected, onSelect, initialFocus, ...rest } = props as any;
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onSelect) {
@@ -27,7 +27,7 @@ const DayPicker = ({
   }
 
   return (
-    <div className={cn("p-3", className)} {...props}>
+    <div className={cn("p-3", className)} {...rest}>
         <p className="text-sm text-center text-muted-foreground mb-2">Calendar functionality is limited.</p>
         <input 
           type="date"
