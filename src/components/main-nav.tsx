@@ -14,9 +14,7 @@ import {
   Settings,
   ShieldCheck,
   QrCode,
-  BookOpen,
 } from 'lucide-react';
-import { useTutorial } from './tutorial-provider';
 
 const navItems = [
   {
@@ -47,12 +45,6 @@ const navItems = [
 
 const secondaryNavItems = [
     {
-        href: '/tutorial',
-        icon: BookOpen,
-        label: 'Tutorial',
-        selector: '#nav-tutorial'
-    },
-    {
         href: '/safety',
         icon: ShieldCheck,
         label: 'Segurança',
@@ -68,16 +60,6 @@ const secondaryNavItems = [
 
 export function MainNav() {
   const pathname = usePathname();
-  const { startTutorial } = useTutorial();
-
-  const handleTutorialClick = (e: React.MouseEvent) => {
-    // If we are not on the tutorial page, let the link navigate.
-    // The tutorial page itself will handle starting the tour.
-    if (pathname === '/tutorial') {
-      e.preventDefault();
-      startTutorial();
-    }
-  }
 
   return (
     <>
@@ -106,7 +88,7 @@ export function MainNav() {
                 isActive={pathname === item.href}
                 tooltip={item.label}
             >
-                <Link href={item.href} onClick={item.href === '/tutorial' ? handleTutorialClick : undefined}>
+                <Link href={item.href}>
                     <item.icon />
                     <span>{item.label}</span>
                 </Link>

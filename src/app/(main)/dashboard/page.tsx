@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { PageHeader, PageHeaderHeading } from '@/components/page-header';
 import {
   Card,
@@ -33,7 +33,6 @@ import { ptBR } from 'date-fns/locale';
 import { useUser, useCollection, useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { useTutorial } from '@/components/tutorial-provider';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -59,29 +58,9 @@ const StatCard: React.FC<{ title: string; value: string | number; description: s
     </Card>
 );
 
-const LOCAL_STORAGE_KEY = 'welcomeTourCompleted';
-
 export default function DashboardPage() {
     const { user } = useUser();
     const firestore = useFirestore();
-    const { startTutorial } = useTutorial();
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                const tourCompleted = localStorage.getItem(LOCAL_STORAGE_KEY);
-                if (!tourCompleted) {
-                    // Use a small delay to ensure the UI is mounted and ready.
-                    setTimeout(() => {
-                        startTutorial();
-                    }, 500);
-                }
-            } catch (error) {
-                console.warn("Could not access localStorage. Welcome tour will not be shown automatically.", error);
-            }
-        }
-    }, [startTutorial]);
-
 
     const campaignsQuery = useMemoFirebase(() => {
         if (!user) return null;
