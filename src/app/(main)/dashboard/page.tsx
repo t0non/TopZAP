@@ -27,11 +27,12 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import type { Campaign } from '@/lib/types';
-import { subDays, format, isToday, parseISO } from 'date-fns';
+import { subDays, format, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useUser, useCollection, useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { WelcomeTour } from '@/components/welcome-tour';
 
 
 const Greeting = () => {
@@ -69,10 +70,10 @@ export default function DashboardPage() {
     const campaignsData = allCampaigns || [];
 
     const dailyStats = {
-        sentToday: campaignsData.filter(c => c.status === 'Sent' && c.sentDate && isToday(parseISO(c.sentDate))).length,
+        sentToday: campaignsData.filter(c => c.status === 'Sent' && c.sentDate && isToday(new Date(c.sentDate))).length,
         inQueue: campaignsData.filter(c => c.status === 'Scheduled').length,
-        errorRate: campaignsData.filter(c => c.sentDate && isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length > 0 ?
-            (campaignsData.filter(c => c.sentDate && isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length / campaignsData.filter(c => c.sentDate && isToday(parseISO(c.sentDate))).length) * 100
+        errorRate: campaignsData.filter(c => c.sentDate && isToday(new Date(c.sentDate))).length > 0
+            ? (campaignsData.filter(c => c.sentDate && isToday(new Date(c.sentDate)) && c.status === 'Failed').length / campaignsData.filter(c => c.sentDate && isToday(new Date(c.sentDate))).length) * 100
             : 0,
         dailyLimit: 300,
     };
@@ -99,6 +100,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container relative">
+      <WelcomeTour />
       <PageHeader className='pb-4'>
             <Greeting />
       </PageHeader>
