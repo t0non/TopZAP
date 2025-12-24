@@ -333,9 +333,16 @@ export function CreateCampaignWizard() {
                 
                 {/* Navigation Buttons */}
                 <div className="flex justify-between">
-                    <Button type="button" variant="ghost" onClick={prev} disabled={currentStep === 0 || isSubmitting}>
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
-                    </Button>
+                    {currentStep === 0 ? (
+                        <Button type="button" variant="ghost" onClick={() => router.push('/campaigns')} disabled={isSubmitting}>
+                            Cancelar
+                        </Button>
+                    ) : (
+                        <Button type="button" variant="ghost" onClick={prev} disabled={isSubmitting}>
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
+                        </Button>
+                    )}
+                    
                     {currentStep < steps.length - 1 ? (
                         <Button type="button" onClick={next}>Próximo</Button>
                     ) : (

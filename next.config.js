@@ -38,6 +38,12 @@ const nextConfig = {
         hostname: 'api.qrserver.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'atendimento.uazapi.com',
+        port: '',
+        pathname: '/**',
       }
     ],
     unoptimized: true,
