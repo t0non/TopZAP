@@ -3,14 +3,14 @@ import React from 'react';
 import { PageHeader, PageHeaderHeading, PageHeaderDescription, PageHeaderActions } from '@/components/page-header';
 import { ContactsTable } from '@/components/contacts/contacts-table';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Upload } from 'lucide-react';
 import { ContactForm } from '@/components/contacts/contact-form';
+import { CsvImportWizard } from '@/components/contacts/csv-import-wizard';
 import { useToast } from '@/hooks/use-toast';
 import type { Contact } from '@/lib/types';
-import { v4 as uuidv4 } from 'uuid';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection, writeBatch } from 'firebase/firestore';
 
 export default function ContactsPage() {
   const { toast } = useToast();
@@ -18,6 +18,7 @@ export default function ContactsPage() {
   const firestore = useFirestore();
 
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isImportWizardOpen, setIsImportWizardOpen] = React.useState(false);
   const [contactToEdit, setContactToEdit] = React.useState<Contact | null>(null);
   const [filter, setFilter] = React.useState('all');
 
@@ -54,6 +55,40 @@ export default function ContactsPage() {
         toast({ title: "Erro ao salvar", description: error.message || "Não foi possível salvar o contato.", variant: "destructive" });
     }
   };
+  
+  const handleBatchImport = async (contacts: Omit<Contact, 'id' | 'userId' | 'createdAt' | 'avatarUrl'>[]) => {
+    if (!user) {
+        toast({ title: "Erro", description: "Você precisa estar logado.", variant: "destructive" });
+        return;
+    }
+    
+    const batch = writeBatch(firestore);
+    
+    contacts.forEach(contactData => {
+        const newContact: Omit<Contact, 'id'> = {
+            userId: user.uid,
+            name: contactData.name || '',
+            phone: contactData.phone || '',
+            segment: 'New',
+            createdAt: new Date(),
+            avatarUrl: PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl,
+        };
+        const contactRef = doc(collection(firestore, 'users', user.uid, 'contacts'));
+        batch.set(contactRef, newContact);
+    });
+
+    try {
+        await batch.commit();
+        toast({
+            title: "Contatos importados!",
+            description: `${contacts.length} novos contatos foram adicionados com sucesso.`
+        });
+        setIsImportWizardOpen(false);
+    } catch (error: any) {
+        console.error("Error batch importing contacts:", error);
+        toast({ title: "Erro na importação", description: error.message || "Não foi possível importar os contatos.", variant: "destructive" });
+    }
+  };
 
   const handleEditRequest = (contact: Contact) => {
     setContactToEdit(contact);
@@ -75,6 +110,10 @@ export default function ContactsPage() {
           </PageHeaderDescription>
         </div>
         <PageHeaderActions>
+            <Button variant="outline" onClick={() => setIsImportWizardOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Importar CSV
+            </Button>
             <Button onClick={handleNewRequest}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Novo Contato
@@ -99,6 +138,12 @@ export default function ContactsPage() {
         }}
         contact={contactToEdit}
         onSave={handleSaveContact}
+      />
+      
+      <CsvImportWizard
+        isOpen={isImportWizardOpen}
+        onOpenChange={setIsImportWizardOpen}
+        onImport={handleBatchImport}
       />
     </div>
   );
