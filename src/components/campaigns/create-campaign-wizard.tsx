@@ -40,7 +40,7 @@ import { contacts as defaultContacts } from '@/lib/data';
 import { MessageComposer } from './message-composer';
 import { SpeedSelector } from './speed-selector';
 import { v4 as uuidv4 } from 'uuid';
-import type { Contact } from '@/lib/types';
+import type { Contact, Campaign } from '@/lib/types';
 
 const formSchema = z.object({
   name: z.string().min(5, { message: 'O nome da campanha deve ter pelo menos 5 caracteres.' }),
@@ -73,8 +73,13 @@ export function CreateCampaignWizard() {
     const [contacts, setContacts] = useState<Contact[]>([]);
 
     useEffect(() => {
-        const storedContacts = localStorage.getItem('contacts');
-        setContacts(storedContacts ? JSON.parse(storedContacts) : defaultContacts);
+        try {
+            const storedContacts = localStorage.getItem('contacts');
+            setContacts(storedContacts ? JSON.parse(storedContacts) : defaultContacts);
+        } catch (error) {
+            console.error("Failed to parse contacts from localStorage", error);
+            setContacts(defaultContacts);
+        }
     }, []);
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -108,7 +113,7 @@ export function CreateCampaignWizard() {
         setIsSubmitting(true);
         console.log(values);
 
-        const newCampaign = {
+        const newCampaign: Campaign = {
             id: uuidv4(),
             name: values.name,
             status: 'Sent',
@@ -123,13 +128,15 @@ export function CreateCampaignWizard() {
                 title: "Campanha Enviada para a Fila!",
                 description: `A campanha "${values.name}" foi iniciada com sucesso.`
             });
-            // Store new campaign ID to be highlighted
-            sessionStorage.setItem('newlyCreatedCampaignId', newCampaign.id);
-
-            // Add campaign to mock data (since we don't have a real backend)
-            // In a real app, this would be handled by react-query/SWR refetching
-            const existingCampaigns = JSON.parse(localStorage.getItem('campaigns') || '[]');
-            localStorage.setItem('campaigns', JSON.stringify([newCampaign, ...existingCampaigns]));
+            
+            try {
+                const existingCampaigns: Campaign[] = JSON.parse(localStorage.getItem('campaigns') || '[]');
+                localStorage.setItem('campaigns', JSON.stringify([newCampaign, ...existingCampaigns]));
+                // Store new campaign ID to be highlighted on the next page
+                sessionStorage.setItem('newlyCreatedCampaignId', newCampaign.id);
+            } catch (error) {
+                 console.error("Failed to save campaign to localStorage", error);
+            }
             
             router.push('/campaigns');
 

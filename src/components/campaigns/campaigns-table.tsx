@@ -103,17 +103,25 @@ export const columns: ColumnDef<Campaign>[] = [
 
 export function CampaignsTable() {
     const [data, setData] = React.useState<Campaign[]>([...defaultData]);
+    const [isMounted, setIsMounted] = React.useState(false);
     
     React.useEffect(() => {
-        const storedCampaigns = localStorage.getItem('campaigns');
-        if (storedCampaigns) {
-            setData(JSON.parse(storedCampaigns));
+        setIsMounted(true);
+        try {
+            const storedCampaigns = localStorage.getItem('campaigns');
+            if (storedCampaigns) {
+                setData(JSON.parse(storedCampaigns));
+            }
+        } catch (error) {
+            console.error("Failed to parse campaigns from localStorage", error);
         }
     }, []);
 
     React.useEffect(() => {
-        localStorage.setItem('campaigns', JSON.stringify(data));
-    }, [data]);
+        if (isMounted) {
+            localStorage.setItem('campaigns', JSON.stringify(data));
+        }
+    }, [data, isMounted]);
 
     const [highlightedRow, setHighlightedRow] = React.useState<string | null>(null);
     const [sorting, setSorting] = React.useState<SortingState>([])
@@ -155,6 +163,10 @@ export function CampaignsTable() {
       columnFilters,
     },
   });
+
+  if (!isMounted) {
+      return null;
+  }
 
   return (
     <div>

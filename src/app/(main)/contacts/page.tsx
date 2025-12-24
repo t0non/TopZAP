@@ -20,19 +20,28 @@ export default function ContactsPage() {
   const [isImportOpen, setIsImportOpen] = React.useState(false);
   const [contactToEdit, setContactToEdit] = React.useState<Contact | null>(null);
   const [filter, setFilter] = React.useState('all');
+  const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
-    const storedContacts = localStorage.getItem('contacts');
-    if (storedContacts) {
-      setData(JSON.parse(storedContacts));
-    } else {
-      setData([...defaultData]);
+    setIsMounted(true);
+    try {
+      const storedContacts = localStorage.getItem('contacts');
+      if (storedContacts) {
+        setData(JSON.parse(storedContacts));
+      } else {
+        setData([...defaultData]);
+      }
+    } catch (error) {
+        console.error("Failed to parse contacts from localStorage", error);
+        setData([...defaultData]);
     }
   }, []);
 
   React.useEffect(() => {
-    localStorage.setItem('contacts', JSON.stringify(data));
-  }, [data]);
+    if (isMounted) {
+      localStorage.setItem('contacts', JSON.stringify(data));
+    }
+  }, [data, isMounted]);
 
   const handleSaveContact = (contactData: Omit<Contact, 'avatarUrl' | 'createdAt' | 'id'> & {id?: string}) => {
     if (contactData.id) {
@@ -86,6 +95,10 @@ export default function ContactsPage() {
     if (filter === 'blocked') return data.filter(c => c.segment === 'Inactive');
     return data;
   }, [data, filter]);
+
+  if (!isMounted) {
+      return null;
+  }
 
   return (
     <div className="container">
