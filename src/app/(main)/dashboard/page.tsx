@@ -9,11 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   CheckCircle2,
@@ -25,7 +20,6 @@ import {
   XCircle,
   Power,
   ServerCrash,
-  BatteryWarning,
   MessageSquareQuote
 } from 'lucide-react';
 import {
@@ -65,11 +59,6 @@ const lastSentMessages = [
     { id: 4, to: "Daniel Alves", status: "Sent", campaign: "Promo de Verão" },
     { id: 5, to: "Eduarda Lima", status: "Waiting", campaign: "Lançamento Outono" },
 ]
-
-const totalSentThisMonth = 3250;
-const costPerMessage = 0.30;
-const savingsThisMonth = (totalSentThisMonth * costPerMessage).toFixed(2).replace('.', ',');
-
 
 const Greeting = () => {
     // Hardcoded user name for now.
@@ -197,8 +186,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="lg:col-span-8 space-y-6">
+      <div className="mt-6 grid grid-cols-1 gap-6">
+        <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle>Desempenho da Semana</CardTitle>
@@ -245,36 +234,7 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
         </div>
-
-        <div className="lg:col-span-4 space-y-6">
-            <Card className="bg-blue-500/10 border-blue-500/30 text-center">
-                <CardHeader>
-                    <CardTitle className="text-blue-800 dark:text-blue-300">Economia do Mês</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-4xl font-bold text-blue-800 dark:text-blue-300">R$ {savingsThisMonth}</p>
-                    <p className="text-sm text-blue-700 dark:text-blue-400 mt-2">Você economizou este valor em comparação com a API Oficial do WhatsApp.</p>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader>
-                    <CardTitle>Avisos do Sistema</CardTitle>
-                </CardHeader>
-                <CardContent>
-                     <Alert variant="destructive">
-                        <BatteryWarning className="h-4 w-4" />
-                        <AlertTitle>Bateria Baixa!</AlertTitle>
-                        <AlertDescription>
-                            A bateria do celular conectado está em 15%. Conecte-o ao carregador para garantir os envios.
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
-        </div>
-
       </div>
     </div>
   );
 }
-
-    

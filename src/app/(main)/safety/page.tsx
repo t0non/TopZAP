@@ -8,40 +8,6 @@ import {
 } from "@/components/ui/accordion"
 import { Bot, BadgeDollarSign, ShieldCheck, Ban, Flame } from 'lucide-react';
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-
-
-const EconomyCalculator = () => {
-  const [messages, setMessages] = React.useState(2000);
-  const cost = (messages * 0.30).toFixed(2).replace('.', ',');
-
-  return (
-    <Card className="bg-primary/10 border-primary/30">
-      <CardContent className="pt-6">
-        <div className="grid md:grid-cols-2 gap-6 items-center">
-          <div className="space-y-2">
-            <Label htmlFor="message-count" className='text-lg'>Quantas mensagens você manda por mês?</Label>
-            <Input 
-              id="message-count"
-              type="number"
-              value={messages}
-              onChange={(e) => setMessages(Number(e.target.value))}
-              className="max-w-xs text-lg h-12"
-              placeholder="2000"
-            />
-          </div>
-          <div className="text-center md:text-left">
-            <p className="text-muted-foreground">Na API Oficial, você gastaria aprox.:</p>
-            <p className="text-4xl lg:text-5xl font-bold text-primary">R$ {cost}</p>
-            <p className="font-semibold">Aqui, o custo por mensagem é R$ 0,00.</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
 
 export default function SafetyPage() {
   return (
@@ -54,7 +20,6 @@ export default function SafetyPage() {
       </PageHeader>
       
       <div className="space-y-8">
-        <EconomyCalculator />
         <Accordion type="single" collapsible className="w-full" defaultValue='item-2'>
           <AccordionItem value="item-1">
             <AccordionTrigger className='text-lg'>
