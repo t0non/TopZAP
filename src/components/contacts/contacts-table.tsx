@@ -100,7 +100,7 @@ export function ContactsTable({ data, setData, onEditRequest, filter, setFilter 
         accessorKey: "phone",
         header: "Telefone",
         cell: ({ row }) => {
-            const hasWhatsapp = Math.random() > 0.1; // Mock health
+            const hasWhatsapp = true; // Mock health, removed Math.random()
             return (
                 <div className='flex items-center gap-2'>
                     {hasWhatsapp ? <CheckCircle2 className='h-4 w-4 text-green-500' /> : <XCircle className='h-4 w-4 text-red-500' />}
