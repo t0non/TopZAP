@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui
 import {
   Loader2, Sparkles, AlertTriangle, MessageSquare, Users, Star, Cake, ShieldX, Globe, ArrowLeft, Send
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { handleOptimizeMessage } from '@/app/actions';
 import type { OptimizeMessageContentOutput } from '@/ai/flows/optimize-message-content';
 import { toast } from '@/hooks/use-toast';
