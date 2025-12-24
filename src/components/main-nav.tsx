@@ -41,7 +41,7 @@ const navItems = [
     href: '/whatsapp-connect',
     icon: QrCode,
     label: 'Conectar',
-    selector: '#nav-whatsapp-connect'
+    selector: '#tour-connect-wa'
   },
 ];
 

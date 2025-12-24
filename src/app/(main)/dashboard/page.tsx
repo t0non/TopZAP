@@ -15,6 +15,7 @@ import {
   TrendingUp,
   TriangleAlert,
   XCircle,
+  PlusCircle
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -33,6 +34,8 @@ import { useUser, useCollection, useFirestore } from '@/firebase';
 import { useMemoFirebase } from '@/firebase/provider';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { useTutorial } from '@/components/tutorial-provider';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 
 const Greeting = () => {
@@ -41,8 +44,8 @@ const Greeting = () => {
     return <PageHeaderHeading>Olá, {userName}.</PageHeaderHeading>;
 }
 
-const StatCard: React.FC<{ title: string; value: string | number; description: string; icon: React.ReactNode; isError?: boolean }> = ({ title, value, description, icon, isError }) => (
-    <Card className={`border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300 ${isError ? 'bg-destructive/10 border-destructive/50' : ''}`}>
+const StatCard: React.FC<{ title: string; value: string | number; description: string; icon: React.ReactNode; isError?: boolean, id?: string }> = ({ title, value, description, icon, isError, id }) => (
+    <Card id={id} className={`border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300 ${isError ? 'bg-destructive/10 border-destructive/50' : ''}`}>
         <CardHeader className="pb-2">
             <CardTitle className='flex items-center justify-between text-base'>
                 <span>{title}</span>
@@ -125,7 +128,7 @@ export default function DashboardPage() {
       </PageHeader>
       
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="relative p-[2px] rounded-xl bg-gradient-to-r from-blue-400 to-green-300 shadow-sm hover:shadow-md transition-shadow duration-300">
+        <div id="tour-stats-card" className="relative p-[2px] rounded-xl bg-gradient-to-r from-blue-400 to-green-300 shadow-sm hover:shadow-md transition-shadow duration-300">
             <div className="h-full w-full bg-card rounded-lg">
                 <CardHeader className="pb-2">
                     <CardTitle className='flex items-center justify-between text-base'>
@@ -192,9 +195,17 @@ export default function DashboardPage() {
         </div>
         <div className="lg:col-span-1">
           <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Últimos Envios</CardTitle>
-                <CardDescription>Mini-histórico das últimas 5 mensagens processadas.</CardDescription>
+              <CardHeader className='flex-row items-center justify-between'>
+                <div>
+                    <CardTitle>Últimos Envios</CardTitle>
+                    <CardDescription>Mini-histórico das últimas mensagens.</CardDescription>
+                </div>
+                <Button asChild size="sm" id="tour-new-campaign">
+                    <Link href="/campaigns/new">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Nova Campanha
+                    </Link>
+                </Button>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
