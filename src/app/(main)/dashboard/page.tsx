@@ -5,7 +5,6 @@ import { PageHeader, PageHeaderHeading } from '@/components/page-header';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -27,18 +26,21 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import type { Campaign } from '@/lib/types';
-import { campaigns as defaultCampaigns } from '@/lib/data';
 import { subDays, format, isToday, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useUser, useCollection, useFirestore } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/provider';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+
 
 const Greeting = () => {
-    // Hardcoded user name for now.
-    const userName = "Usuário";
+    const { user } = useUser();
+    const userName = user?.displayName || "Usuário";
     return <PageHeaderHeading>Olá, {userName}.</PageHeaderHeading>;
 }
 
 const StatCard: React.FC<{ title: string; value: string | number; description: string; icon: React.ReactNode; isError?: boolean }> = ({ title, value, description, icon, isError }) => (
-    <Card className={`border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow duration-300 ${isError ? 'bg-destructive/10 border-destructive/50' : ''}`}>
+    <Card className={`border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300 ${isError ? 'bg-destructive/10 border-destructive/50' : ''}`}>
         <CardHeader className="pb-2">
             <CardTitle className='flex items-center justify-between text-base'>
                 <span>{title}</span>
@@ -46,44 +48,37 @@ const StatCard: React.FC<{ title: string; value: string | number; description: s
             </CardTitle>
         </CardHeader>
         <CardContent>
-            <p className={`text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50 ${isError ? 'text-destructive' : ''}`}>{value}</p>
+            <p className={`text-4xl font-bold tracking-tight text-slate-900 ${isError ? 'text-destructive' : ''}`}>{value}</p>
             <p className='text-sm text-muted-foreground'>{description}</p>
         </CardContent>
     </Card>
 );
 
 export default function DashboardPage() {
-    const [isMounted, setIsMounted] = useState(false);
-    const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
+    const { user } = useUser();
+    const firestore = useFirestore();
 
-    useEffect(() => {
-        setIsMounted(true);
-        try {
-            const storedCampaigns = localStorage.getItem('campaigns');
-            if (storedCampaigns) {
-                setAllCampaigns(JSON.parse(storedCampaigns));
-            } else {
-                localStorage.setItem('campaigns', JSON.stringify(defaultCampaigns));
-                setAllCampaigns(defaultCampaigns);
-            }
-        } catch (error) {
-            console.error("Failed to access localStorage", error);
-            setAllCampaigns(defaultCampaigns);
-        }
-    }, []);
+    const campaignsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(collection(firestore, 'users', user.uid, 'campaigns'), orderBy('sentDate', 'desc'));
+    }, [firestore, user]);
+
+    const { data: allCampaigns } = useCollection<Campaign>(campaignsQuery);
+
+    const campaignsData = allCampaigns || [];
 
     const dailyStats = {
-        sentToday: allCampaigns.filter(c => c.status === 'Sent' && isToday(parseISO(c.sentDate))).length,
-        inQueue: allCampaigns.filter(c => c.status === 'Scheduled').length,
-        errorRate: allCampaigns.filter(c => isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length > 0 ?
-            (allCampaigns.filter(c => isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length / allCampaigns.filter(c => isToday(parseISO(c.sentDate))).length) * 100
+        sentToday: campaignsData.filter(c => c.status === 'Sent' && isToday(parseISO(c.sentDate))).length,
+        inQueue: campaignsData.filter(c => c.status === 'Scheduled').length,
+        errorRate: campaignsData.filter(c => isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length > 0 ?
+            (campaignsData.filter(c => isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length / campaignsData.filter(c => isToday(parseISO(c.sentDate))).length) * 100
             : 0,
         dailyLimit: 300,
     };
 
     const weeklyPerformance = Array.from({ length: 7 }).map((_, i) => {
         const date = subDays(new Date(), i);
-        const sentOnDay = allCampaigns.filter(c => c.sentDate.startsWith(format(date, 'yyyy-MM-dd')));
+        const sentOnDay = campaignsData.filter(c => c.sentDate.startsWith(format(date, 'yyyy-MM-dd')));
         return {
             day: format(date, 'EEE', { locale: ptBR }),
             success: sentOnDay.filter(c => c.status === 'Sent').length,
@@ -91,9 +86,8 @@ export default function DashboardPage() {
         };
     }).reverse();
 
-    const lastSentMessages = allCampaigns
+    const lastSentMessages = campaignsData
         .filter(c => c.status === 'Sent' || c.status === 'Failed' || c.status === 'Scheduled')
-        .sort((a, b) => parseISO(b.sentDate).getTime() - parseISO(a.sentDate).getTime())
         .slice(0, 5)
         .map(c => ({
             id: c.id,
@@ -102,10 +96,6 @@ export default function DashboardPage() {
             campaign: c.name,
         }));
 
-    if (!isMounted) {
-        return null;
-    }
-
   return (
     <div className="container relative">
       <PageHeader className='pb-4'>
@@ -113,9 +103,8 @@ export default function DashboardPage() {
       </PageHeader>
       
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Special Gradient Card */}
         <div className="relative p-[2px] rounded-xl bg-gradient-to-r from-blue-400 to-green-300 shadow-sm hover:shadow-md transition-shadow duration-300">
-            <div className="h-full w-full bg-card dark:bg-slate-900 rounded-lg">
+            <div className="h-full w-full bg-card rounded-lg">
                 <CardHeader className="pb-2">
                     <CardTitle className='flex items-center justify-between text-base'>
                         <span>Envios Hoje</span>
@@ -123,7 +112,7 @@ export default function DashboardPage() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{dailyStats.sentToday}</p>
+                    <p className="text-4xl font-bold tracking-tight text-slate-900">{dailyStats.sentToday}</p>
                     <p className='text-sm text-muted-foreground'>Mensagens nas últimas 24h</p>
                 </CardContent>
             </div>
@@ -144,7 +133,7 @@ export default function DashboardPage() {
             isError={dailyStats.errorRate > 5}
         />
 
-        <Card className="border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow duration-300">
+        <Card className="border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
              <CardHeader className="pb-2">
                 <CardTitle className='flex items-center justify-between text-base'>
                     <span>Limite de Segurança</span>
@@ -152,7 +141,7 @@ export default function DashboardPage() {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-2xl font-bold mb-2 tracking-tight text-slate-900 dark:text-slate-50">{`${dailyStats.sentToday}/${dailyStats.dailyLimit}`}</p>
+                <p className="text-2xl font-bold mb-2 tracking-tight text-slate-900">{`${dailyStats.sentToday}/${dailyStats.dailyLimit}`}</p>
                 <Progress value={(dailyStats.sentToday / dailyStats.dailyLimit) * 100} className='h-3' />
                  <p className='text-sm text-muted-foreground mt-2'>Cota de envios diária</p>
             </CardContent>

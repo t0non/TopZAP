@@ -1,70 +1,58 @@
 'use client';
-
 import React from 'react';
 import { PageHeader, PageHeaderHeading, PageHeaderDescription, PageHeaderActions } from '@/components/page-header';
 import { ContactsTable } from '@/components/contacts/contacts-table';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { ContactForm } from '@/components/contacts/contact-form';
 import { useToast } from '@/hooks/use-toast';
 import type { Contact } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { contacts as defaultData } from '@/lib/data';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 
 export default function ContactsPage() {
   const { toast } = useToast();
-  const [data, setData] = React.useState<Contact[]>(defaultData);
+  const { user } = useUser();
+  const firestore = useFirestore();
+
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [isImporting, setIsImporting] = React.useState(false);
   const [contactToEdit, setContactToEdit] = React.useState<Contact | null>(null);
   const [filter, setFilter] = React.useState('all');
-  const [isMounted, setIsMounted] = React.useState(false);
 
-  React.useEffect(() => {
-    setIsMounted(true);
+  const handleSaveContact = async (contactData: Partial<Contact>) => {
+    if (!user) {
+        toast({ title: "Erro", description: "Você precisa estar logado.", variant: "destructive" });
+        return;
+    }
+
     try {
-        const storedContacts = localStorage.getItem('contacts');
-        if (storedContacts) {
-            setData(JSON.parse(storedContacts));
+        if (contactData.id) {
+            // Edit existing contact
+            const contactRef = doc(firestore, 'users', user.uid, 'contacts', contactData.id);
+            await setDoc(contactRef, contactData, { merge: true });
+            toast({ title: "Contato atualizado!", description: `${contactData.name} foi atualizado com sucesso.` });
         } else {
-            setData([...defaultData]);
-            localStorage.setItem('contacts', JSON.stringify(defaultData));
+            // Add new contact
+            const newContact: Omit<Contact, 'id'> = {
+                userId: user.uid,
+                name: contactData.name || '',
+                phone: contactData.phone || '',
+                segment: contactData.segment || 'New',
+                createdAt: new Date(),
+                avatarUrl: PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl,
+                birthday: contactData.birthday
+            };
+            await addDoc(collection(firestore, 'users', user.uid, 'contacts'), newContact);
+            toast({ title: "Contato criado!", description: `${newContact.name} foi adicionado à sua lista.` });
         }
-    } catch (error) {
-        console.error("Failed to access localStorage", error);
-        setData([...defaultData]);
+        setContactToEdit(null);
+        setIsFormOpen(false);
+    } catch (error: any) {
+        console.error("Error saving contact:", error);
+        toast({ title: "Erro ao salvar", description: error.message || "Não foi possível salvar o contato.", variant: "destructive" });
     }
-  }, []);
-
-  React.useEffect(() => {
-    if (isMounted) {
-      try {
-        localStorage.setItem('contacts', JSON.stringify(data));
-      } catch (error) {
-        console.error("Failed to save contacts to localStorage", error);
-      }
-    }
-  }, [data, isMounted]);
-
-  const handleSaveContact = (contactData: Omit<Contact, 'avatarUrl' | 'createdAt' | 'id'> & {id?: string}) => {
-    if (contactData.id) {
-        // Edit existing contact
-        setData(prev => prev.map(c => c.id === contactData.id ? { ...c, ...contactData } : c));
-        toast({ title: "Contato atualizado!", description: `${contactData.name} foi atualizado com sucesso.` });
-    } else {
-        // Add new contact
-        const newContact: Contact = {
-            ...contactData,
-            id: uuidv4(),
-            createdAt: new Date().toISOString(),
-            avatarUrl: PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl,
-        };
-        setData(prev => [newContact, ...prev]);
-        toast({ title: "Contato criado!", description: `${newContact.name} foi adicionado à sua lista.` });
-    }
-    setContactToEdit(null);
-    setIsFormOpen(false);
   };
 
   const handleEditRequest = (contact: Contact) => {
@@ -75,33 +63,6 @@ export default function ContactsPage() {
   const handleNewRequest = () => {
     setContactToEdit(null);
     setIsFormOpen(true);
-  }
-
-  const handleImportRequest = () => {
-    setIsImporting(true);
-  }
-
-  const handleImportComplete = (newContacts: Omit<Contact, 'avatarUrl' | 'createdAt' | 'id'>[]) => {
-    const contactsWithIds = newContacts.map(c => ({
-        ...c,
-        id: uuidv4(),
-        createdAt: new Date().toISOString(),
-        avatarUrl: PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl,
-    }))
-    setData(prev => [...contactsWithIds, ...prev]);
-    toast({ title: `Importação Concluída!`, description: `${newContacts.length} novos contatos foram adicionados.`})
-    setIsImporting(false);
-  }
-
-  const filteredData = React.useMemo(() => {
-    if (filter === 'all') return data;
-    if (filter === 'vip') return data.filter(c => c.segment === 'VIP');
-    if (filter === 'blocked') return data.filter(c => c.segment === 'Inactive');
-    return data;
-  }, [data, filter]);
-
-  if (!isMounted) {
-      return null;
   }
 
   return (
@@ -122,8 +83,6 @@ export default function ContactsPage() {
       </PageHeader>
       
       <ContactsTable 
-        data={filteredData}
-        setData={setData}
         onEditRequest={handleEditRequest} 
         filter={filter}
         setFilter={setFilter}

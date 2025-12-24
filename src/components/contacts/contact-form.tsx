@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -37,6 +36,7 @@ import { Calendar } from '../ui/calendar';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Contact } from '@/lib/types';
+import { serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
   id: z.string().optional(),
@@ -49,8 +49,8 @@ const formSchema = z.object({
 interface ContactFormProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
-    contact?: Contact | null;
-    onSave: (contact: Omit<Contact, 'avatarUrl' | 'createdAt'>) => void;
+    contact?: Omit<Contact, 'createdAt'> & { createdAt?: any } | null;
+    onSave: (contact: Partial<Contact>) => void;
 }
 
 export function ContactForm({ isOpen, onOpenChange, contact, onSave }: ContactFormProps) {
@@ -66,18 +66,34 @@ export function ContactForm({ isOpen, onOpenChange, contact, onSave }: ContactFo
   });
 
   React.useEffect(() => {
+    let birthdayDate: Date | undefined = undefined;
+    if (contact?.birthday) {
+        if (typeof contact.birthday === 'string') {
+            birthdayDate = new Date(contact.birthday);
+        }
+    }
     form.reset({
         id: contact?.id,
         name: contact?.name || '',
         phone: contact?.phone || '',
         segment: contact?.segment || 'New',
-        birthday: contact?.birthday ? new Date(contact.birthday) : undefined,
+        birthday: birthdayDate,
     });
   }, [contact, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const birthdayString = values.birthday ? format(values.birthday, 'yyyy-MM-dd') : undefined;
-    onSave({ ...values, birthday: birthdayString });
+    
+    let dataToSave: Partial<Contact> & { createdAt?: any } = {
+        ...values,
+        birthday: birthdayString,
+    };
+    
+    if (!values.id) { // New contact
+        dataToSave.createdAt = serverTimestamp();
+    }
+    
+    onSave(dataToSave);
     onOpenChange(false);
   }
 

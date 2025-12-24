@@ -19,15 +19,20 @@ import {
     ColumnFiltersState,
     getFilteredRowModel,
   } from "@tanstack/react-table"
-import { campaigns as defaultData } from '@/lib/data';
 import type { Campaign } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '../ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useCollection } from '@/firebase';
+import { useUser } from '@/firebase';
+import { useMemoFirebase } from '@/firebase/provider';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+
 
 export const columns: ColumnDef<Campaign>[] = [
     {
@@ -103,43 +108,40 @@ export const columns: ColumnDef<Campaign>[] = [
   ];
 
 export function CampaignsTable() {
-    const [data, setData] = React.useState<Campaign[]>([]);
+    const { user } = useUser();
+    const firestore = useFirestore();
+    
+    const campaignsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(collection(firestore, 'users', user.uid, 'campaigns'), orderBy('sentDate', 'desc'));
+    }, [firestore, user]);
+
+    const { data: campaigns, isLoading } = useCollection<Campaign>(campaignsQuery);
+    
     const [highlightedRow, setHighlightedRow] = React.useState<string | null>(null);
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-    const [isMounted, setIsMounted] = React.useState(false);
 
     React.useEffect(() => {
-        setIsMounted(true);
-        try {
-            const storedCampaigns = localStorage.getItem('campaigns');
-            if (storedCampaigns) {
-                setData(JSON.parse(storedCampaigns));
-            } else {
-                const initialData = [...defaultData];
-                localStorage.setItem('campaigns', JSON.stringify(initialData));
-                setData(initialData);
-            }
+      try {
+          const newId = sessionStorage.getItem('newlyCreatedCampaignId');
+          if (newId) {
+              setHighlightedRow(newId);
+              sessionStorage.removeItem('newlyCreatedCampaignId');
 
-            const newId = sessionStorage.getItem('newlyCreatedCampaignId');
-            if (newId) {
-                setHighlightedRow(newId);
-                sessionStorage.removeItem('newlyCreatedCampaignId');
+              const timer = setTimeout(() => {
+                  setHighlightedRow(null);
+              }, 3000);
 
-                const timer = setTimeout(() => {
-                    setHighlightedRow(null);
-                }, 3000);
-
-                return () => clearTimeout(timer);
-            }
-        } catch (error) {
-            console.error("Failed to access localStorage", error);
-            setData([...defaultData]);
-        }
+              return () => clearTimeout(timer);
+          }
+      } catch (error) {
+          console.error("Failed to access sessionStorage", error);
+      }
     }, []);
 
     const table = useReactTable({
-      data,
+      data: campaigns || [],
       columns,
       getCoreRowModel: getCoreRowModel(),
       getPaginationRowModel: getPaginationRowModel(),
@@ -153,8 +155,12 @@ export function CampaignsTable() {
       },
     });
 
-    if (!isMounted) {
-        return null;
+    if (isLoading) {
+        return (
+          <div className="flex items-center justify-center rounded-md border h-96">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        );
     }
 
     return (
@@ -213,7 +219,7 @@ export function CampaignsTable() {
                     colSpan={columns.length}
                     className="h-24 text-center"
                   >
-                    Nenhum resultado.
+                    Nenhuma campanha encontrada.
                   </TableCell>
                 </TableRow>
               )}

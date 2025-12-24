@@ -36,11 +36,13 @@ import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { PhonePreview } from './phone-preview';
 import { cn } from '@/lib/utils';
-import { contacts as defaultContacts } from '@/lib/data';
 import { MessageComposer } from './message-composer';
 import { SpeedSelector } from './speed-selector';
 import { v4 as uuidv4 } from 'uuid';
 import type { Contact, Campaign } from '@/lib/types';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/provider';
 
 const formSchema = z.object({
   name: z.string().min(5, { message: 'O nome da campanha deve ter pelo menos 5 caracteres.' }),
@@ -65,22 +67,20 @@ const steps = [
 
 export function CreateCampaignWizard() {
     const router = useRouter();
+    const { user } = useUser();
+    const firestore = useFirestore();
     const [currentStep, setCurrentStep] = useState(0);
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [optimizationResult, setOptimizationResult] = useState<OptimizeMessageContentOutput | null>(null);
     const [submitError, setSubmitError] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [contacts, setContacts] = useState<Contact[]>([]);
 
-    useEffect(() => {
-        try {
-            const storedContacts = localStorage.getItem('contacts');
-            setContacts(storedContacts ? JSON.parse(storedContacts) : defaultContacts);
-        } catch (error) {
-            console.error("Failed to parse contacts from localStorage", error);
-            setContacts(defaultContacts);
-        }
-    }, []);
+    const contactsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return collection(firestore, 'users', user.uid, 'contacts');
+    }, [firestore, user]);
+
+    const { data: contacts } = useCollection<Contact>(contactsQuery);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -93,7 +93,7 @@ export function CreateCampaignWizard() {
         },
     });
 
-    const { watch, setValue, trigger, reset, handleSubmit, formState: { errors } } = form;
+    const { watch, setValue, trigger, handleSubmit, formState: { errors } } = form;
     const messageValue = watch('message');
     const mediaFile = watch('media');
     const sendSpeed = watch('sendSpeed');
@@ -109,37 +109,39 @@ export function CreateCampaignWizard() {
         if (currentStep > 0) setCurrentStep(step => step - 1);
     }
 
-    const processSubmit = (values: z.infer<typeof formSchema>) => {
+    const processSubmit = async (values: z.infer<typeof formSchema>) => {
+        if (!user) {
+            toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para criar uma campanha." });
+            return;
+        }
         setIsSubmitting(true);
-        console.log(values);
 
-        const newCampaign: Campaign = {
-            id: uuidv4(),
+        const newCampaign: Omit<Campaign, 'id'> = {
             name: values.name,
             status: 'Sent',
             sentDate: new Date().toISOString(),
             recipients: recipientCount,
             engagement: Math.floor(Math.random() * (95 - 60 + 1) + 60), // Mock engagement
+            userId: user.uid,
         };
 
-        // Simulate API call
-        setTimeout(() => {
+        try {
+            const campaignCollection = collection(firestore, 'users', user.uid, 'campaigns');
+            const docRef = await addDoc(campaignCollection, newCampaign);
+            
             toast({
                 title: "Campanha Enviada para a Fila!",
                 description: `A campanha "${values.name}" foi iniciada com sucesso.`
             });
             
-            try {
-                const existingCampaigns: Campaign[] = JSON.parse(localStorage.getItem('campaigns') || '[]');
-                localStorage.setItem('campaigns', JSON.stringify([newCampaign, ...existingCampaigns]));
-                sessionStorage.setItem('newlyCreatedCampaignId', newCampaign.id);
-            } catch (error) {
-                 console.error("Failed to save campaign to localStorage", error);
-            }
-            
+            sessionStorage.setItem('newlyCreatedCampaignId', docRef.id);
             router.push('/campaigns');
 
-        }, 1500);
+        } catch (error) {
+            console.error("Failed to save campaign to Firestore", error);
+            toast({ variant: "destructive", title: "Erro ao Salvar", description: "Não foi possível salvar a campanha no banco de dados." });
+            setIsSubmitting(false);
+        }
     }
 
     const handleFinalSubmit = () => {
@@ -169,9 +171,11 @@ export function CreateCampaignWizard() {
             setIsOptimizing(false);
         }
     };
+    
+    const validContacts = contacts || [];
 
     const recipientCount = useMemo(() => {
-        const activeContacts = contacts.filter(c => c.segment !== 'Inactive');
+        const activeContacts = validContacts.filter(c => c.segment !== 'Inactive');
         switch (contactSegment) {
             case 'all':
                 return activeContacts.length;
@@ -183,9 +187,9 @@ export function CreateCampaignWizard() {
             default:
                 return 0;
         }
-    }, [contactSegment, contacts]);
+    }, [contactSegment, validContacts]);
 
-    const blockedCount = useMemo(() => contacts.filter(c => c.segment === 'Inactive').length, [contacts]);
+    const blockedCount = useMemo(() => validContacts.filter(c => c.segment === 'Inactive').length, [validContacts]);
 
   return (
     <>

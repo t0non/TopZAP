@@ -5,8 +5,9 @@ import {
   XCircle,
   MessageSquareText,
   TrendingUp,
+  Loader2,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -24,38 +25,46 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { campaigns as defaultCampaigns, contacts as defaultContacts } from '@/lib/data';
 import type { Campaign, Contact } from '@/lib/types';
 import { PageHeader, PageHeaderHeading, PageHeaderActions } from '@/components/page-header';
+import { useDoc, useUser, useFirestore, useCollection } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/provider';
 
 export default function CampaignReportPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const [isClient, setIsClient] = useState(false);
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    setIsClient(true);
-    try {
-        const storedCampaigns = localStorage.getItem('campaigns');
-        const allCampaigns = storedCampaigns ? JSON.parse(storedCampaigns) : defaultCampaigns;
-        const currentCampaign = allCampaigns.find((c: Campaign) => c.id === params.id) || null;
-        setCampaign(currentCampaign);
+  const campaignRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid, 'campaigns', params.id);
+  }, [firestore, user, params.id]);
 
-        const storedContacts = localStorage.getItem('contacts');
-        const allContacts = storedContacts ? JSON.parse(storedContacts) : defaultContacts;
-        setContacts(allContacts);
+  const { data: campaign, isLoading: isCampaignLoading } = useDoc<Campaign>(campaignRef);
+  
+  const contactsRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, 'users', user.uid, 'contacts');
+  }, [firestore, user]);
 
-    } catch (error) {
-        console.error("Failed to access localStorage", error);
-        setCampaign(defaultCampaigns.find((c: Campaign) => c.id === params.id) || null);
-        setContacts(defaultContacts);
-    }
-  }, [params.id]);
+  const { data: contacts, isLoading: areContactsLoading } = useCollection<Contact>(contactsRef);
 
+  const isLoading = isCampaignLoading || areContactsLoading;
+
+  if (isLoading) {
+    return (
+        <div className="container px-4 py-6 md:px-6 lg:py-8">
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        </div>
+    )
+  }
+  
   if (!campaign) {
     return (
         <div className="container px-4 py-6 md:px-6 lg:py-8">
@@ -77,10 +86,10 @@ export default function CampaignReportPage({
       success: Math.floor(campaign.recipients * (campaign.engagement / 100)),
       failed: campaign.recipients - Math.floor(campaign.recipients * (campaign.engagement / 100)),
     },
-    contacts: contacts.slice(0, 10).map(c => ({
+    contacts: (contacts || []).slice(0, 10).map(c => ({
       name: c.name,
       phone: c.phone,
-      status: Math.random() > 0.2 ? 'Sucesso' : 'Falha', // This part remains mock as per original logic
+      status: Math.random() > 0.2 ? 'Sucesso' : 'Falha', // This part remains mock 
     })),
   };
 
@@ -94,12 +103,10 @@ export default function CampaignReportPage({
           </p>
         </div>
         <PageHeaderActions>
-          {isClient && (
             <Button>
               <Download className="mr-2 h-4 w-4" />
               Baixar PDF
             </Button>
-          )}
         </PageHeaderActions>
       </PageHeader>
 
@@ -186,5 +193,3 @@ export default function CampaignReportPage({
     </div>
   );
 }
-
-    

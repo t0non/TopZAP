@@ -27,13 +27,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '../ui/dropdown-menu';
-import { MoreHorizontal, Star, Ban, Users, Crown, FilterX, UserPlus, FileUp } from 'lucide-react';
+import { MoreHorizontal, Star, Ban, Users, Crown, FilterX, Loader2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { useMemoFirebase } from '@/firebase/provider';
 
 interface ContactsTableProps {
     data: Contact[];
-    setData: React.Dispatch<React.SetStateAction<Contact[]>>;
     onEditRequest: (contact: Contact) => void;
     filter: string;
     setFilter: (filter: string) => void;
@@ -61,8 +63,18 @@ const ActionsCell = ({ row, onEdit, onDelete }: { row: Row<Contact>, onEdit: (co
     );
 };
 
-export function ContactsTable({ data, setData, onEditRequest, filter, setFilter }: ContactsTableProps) {
+export function ContactsTable({ onEditRequest, filter, setFilter }: Omit<ContactsTableProps, 'data' | 'setData'>) {
     const { toast } = useToast();
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const contactsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(collection(firestore, 'users', user.uid, 'contacts'), orderBy('createdAt', 'desc'));
+    }, [firestore, user]);
+
+    const { data: contacts, isLoading } = useCollection<Contact>(contactsQuery);
+    
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
     const [contactToDelete, setContactToDelete] = React.useState<Contact | null>(null);
@@ -71,11 +83,17 @@ export function ContactsTable({ data, setData, onEditRequest, filter, setFilter 
         setContactToDelete(contact);
     };
 
-    const handleDeleteConfirm = () => {
-        if (contactToDelete) {
-            setData(prev => prev.filter(c => c.id !== contactToDelete.id));
-            toast({ title: "Contato removido", description: `${contactToDelete.name} foi removido da sua lista.` });
-            setContactToDelete(null);
+    const handleDeleteConfirm = async () => {
+        if (contactToDelete && user) {
+            try {
+                await deleteDoc(doc(firestore, 'users', user.uid, 'contacts', contactToDelete.id));
+                toast({ title: "Contato removido", description: `${contactToDelete.name} foi removido da sua lista.` });
+            } catch (error) {
+                console.error("Error deleting contact: ", error);
+                toast({ variant: 'destructive', title: "Erro", description: "Não foi possível remover o contato." });
+            } finally {
+                setContactToDelete(null);
+            }
         }
     };
 
@@ -132,7 +150,10 @@ export function ContactsTable({ data, setData, onEditRequest, filter, setFilter 
       {
         accessorKey: "createdAt",
         header: "Data de Adição",
-        cell: ({ row }) => new Date(row.getValue("createdAt")).toLocaleDateString('pt-BR', { timeZone: 'UTC' }),
+        cell: ({ row }) => {
+          const date = (row.getValue("createdAt") as any)?.toDate ? (row.getValue("createdAt") as any).toDate() : new Date(row.getValue("createdAt"));
+          return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        }
       },
       {
           id: "actions",
@@ -140,8 +161,16 @@ export function ContactsTable({ data, setData, onEditRequest, filter, setFilter 
       },
     ];
 
+  const filteredData = React.useMemo(() => {
+    if (!contacts) return [];
+    if (filter === 'all') return contacts;
+    if (filter === 'vip') return contacts.filter(c => c.segment === 'VIP');
+    if (filter === 'blocked') return contacts.filter(c => c.segment === 'Inactive');
+    return contacts;
+  }, [contacts, filter]);
+
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -158,6 +187,14 @@ export function ContactsTable({ data, setData, onEditRequest, filter, setFilter 
         onDelete: handleDeleteRequest,
     }
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center rounded-md border h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -220,7 +257,7 @@ export function ContactsTable({ data, setData, onEditRequest, filter, setFilter 
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  Nenhum resultado.
+                  Nenhum contato encontrado.
                 </TableCell>
               </TableRow>
             )}
