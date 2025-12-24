@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader, PageHeaderHeading } from '@/components/page-header';
 import {
   Card,
@@ -56,9 +56,34 @@ const StatCard: React.FC<{ title: string; value: string | number; description: s
     </Card>
 );
 
+const LOCAL_STORAGE_KEY = 'welcomeTourCompleted';
+
 export default function DashboardPage() {
     const { user } = useUser();
     const firestore = useFirestore();
+    const [showTour, setShowTour] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const tourCompleted = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (!tourCompleted) {
+                    setShowTour(true);
+                }
+            } catch (error) {
+                console.warn("Could not access localStorage. Welcome tour will not be shown.", error);
+            }
+        }
+    }, []);
+
+    const handleTourComplete = () => {
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, 'true');
+        } catch (error) {
+            console.warn("Could not access localStorage to save tour state.", error);
+        }
+        setShowTour(false);
+    };
 
     const campaignsQuery = useMemoFirebase(() => {
         if (!user) return null;
@@ -100,7 +125,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container relative">
-      <WelcomeTour />
+      <WelcomeTour isOpen={showTour} onComplete={handleTourComplete} />
       <PageHeader className='pb-4'>
             <Greeting />
       </PageHeader>

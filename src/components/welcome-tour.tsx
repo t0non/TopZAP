@@ -50,30 +50,16 @@ const tourSteps = [
   },
 ];
 
-const LOCAL_STORAGE_KEY = 'welcomeTourCompleted';
+interface WelcomeTourProps {
+    isOpen: boolean;
+    onComplete: () => void;
+}
 
-export function WelcomeTour() {
-  const [isOpen, setIsOpen] = useState(false);
+export function WelcomeTour({ isOpen, onComplete }: WelcomeTourProps) {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const router = useRouter();
 
-  // Check on mount if the tour should be shown.
-  useEffect(() => {
-    // Ensure code runs only on the client where localStorage is available.
-    if (typeof window !== 'undefined') {
-      try {
-        const tourCompleted = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (!tourCompleted) {
-          setIsOpen(true);
-        }
-      } catch (error) {
-        console.warn("Could not access localStorage. Welcome tour will not be shown.", error);
-      }
-    }
-  }, []);
-
-  // Update slide counter when carousel API is ready.
   useEffect(() => {
     if (!api) return;
 
@@ -89,29 +75,16 @@ export function WelcomeTour() {
     };
   }, [api]);
   
-  // Marks the tour as completed and closes the dialog.
-  const completeTour = () => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, 'true');
-    } catch (error) {
-      console.warn("Could not access localStorage to save tour state.", error);
-    }
-    setIsOpen(false);
-  };
-  
-  // Handles clicks on the main action button for each step.
   const handleActionClick = () => {
     const step = tourSteps[current - 1];
     if (step?.href) {
       router.push(step.href);
     }
-    // Always complete the tour when an action is taken.
-    completeTour();
+    onComplete();
   };
 
-  // Skip the tour entirely.
   const handleSkip = () => {
-    completeTour();
+    onComplete();
   };
 
   if (!isOpen) {
@@ -119,8 +92,7 @@ export function WelcomeTour() {
   }
 
   return (
-    // The onOpenChange prop handles closing via 'X' or overlay click.
-    <Dialog open={isOpen} onOpenChange={(open) => !open && completeTour()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onComplete()}>
       <DialogContent className="max-w-md p-0">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-2xl text-center">Bem-vindo ao TOPzap!</DialogTitle>
