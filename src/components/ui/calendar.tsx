@@ -16,8 +16,9 @@ const DayPicker = ({
   selected?: Date;
   onSelect?: (date?: Date) => void;
   disabled?: (date: Date) => boolean;
+  initialFocus?: boolean;
 }) => {
-  const { selected, onSelect, disabled, ...rest } = props as any;
+  const { selected, onSelect, disabled, initialFocus, ...rest } = props as any;
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onSelect) {
