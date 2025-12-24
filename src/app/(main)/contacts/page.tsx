@@ -23,7 +23,6 @@ export default function ContactsPage() {
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
-    setIsMounted(true);
     try {
       const storedContacts = localStorage.getItem('contacts');
       if (storedContacts) {
@@ -35,6 +34,7 @@ export default function ContactsPage() {
         console.error("Failed to parse contacts from localStorage", error);
         setData([...defaultData]);
     }
+    setIsMounted(true);
   }, []);
 
   React.useEffect(() => {

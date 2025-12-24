@@ -106,7 +106,6 @@ export function CampaignsTable() {
     const [isMounted, setIsMounted] = React.useState(false);
     
     React.useEffect(() => {
-        setIsMounted(true);
         try {
             const storedCampaigns = localStorage.getItem('campaigns');
             if (storedCampaigns) {
@@ -115,6 +114,7 @@ export function CampaignsTable() {
         } catch (error) {
             console.error("Failed to parse campaigns from localStorage", error);
         }
+        setIsMounted(true);
     }, []);
 
     React.useEffect(() => {
@@ -130,9 +130,9 @@ export function CampaignsTable() {
     )
 
     React.useEffect(() => {
+      if (isMounted) {
         const newId = sessionStorage.getItem('newlyCreatedCampaignId');
         if (newId) {
-            // Re-fetch or update data
             const storedCampaigns = localStorage.getItem('campaigns');
             const allCampaigns = storedCampaigns ? JSON.parse(storedCampaigns) : defaultData;
             
@@ -143,11 +143,12 @@ export function CampaignsTable() {
 
             const timer = setTimeout(() => {
                 setHighlightedRow(null);
-            }, 3000); // Animation duration
+            }, 3000); 
 
             return () => clearTimeout(timer);
         }
-    }, []);
+      }
+    }, [isMounted]);
 
   const table = useReactTable({
     data,
