@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 220 20% 96%;
+    --background: 220 14% 96%; /* slate-50 */
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -51,13 +51,13 @@
   }
 
   .dark {
-    --background: 225 10% 8%; /* Dark blue-gray */
+    --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    --card: 224 12% 12%; /* Slightly lighter dark */
+    --card: 222 47% 11%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 225 10% 8%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 190 100% 35%; /* Brighter blue for dark mode */
@@ -75,11 +75,11 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 20% 20%;
-    --input: 217.2 20% 20%;
+    --border: 217 33% 25%;
+    --input: 217 33% 25%;
     --ring: 190 100% 40%;
     
-    --sidebar-background: 225 10% 9%;
+    --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 190 100% 35%;
     --sidebar-primary-foreground: 210 40% 98%;

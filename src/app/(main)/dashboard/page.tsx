@@ -37,6 +37,21 @@ const Greeting = () => {
     return <PageHeaderHeading>Olá, {userName}.</PageHeaderHeading>;
 }
 
+const StatCard: React.FC<{ title: string; value: string | number; description: string; icon: React.ReactNode; isError?: boolean }> = ({ title, value, description, icon, isError }) => (
+    <Card className={`border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow duration-300 ${isError ? 'bg-destructive/10 border-destructive/50' : ''}`}>
+        <CardHeader className="pb-2">
+            <CardTitle className='flex items-center justify-between text-base'>
+                <span>{title}</span>
+                <div className={`h-5 w-5 ${isError ? 'text-destructive' : 'text-muted-foreground'}`}>{icon}</div>
+            </CardTitle>
+        </CardHeader>
+        <CardContent>
+            <p className={`text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50 ${isError ? 'text-destructive' : ''}`}>{value}</p>
+            <p className='text-sm text-muted-foreground'>{description}</p>
+        </CardContent>
+    </Card>
+);
+
 export default function DashboardPage() {
     const [isMounted, setIsMounted] = useState(false);
     const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
@@ -98,51 +113,46 @@ export default function DashboardPage() {
       </PageHeader>
       
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-            <CardHeader>
-                <CardTitle className='flex items-center justify-between text-base'>
-                    <span>Envios Hoje</span>
-                    <MessageSquareText className="h-5 w-5 text-muted-foreground" />
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-4xl font-bold">{dailyStats.sentToday}</p>
-                <p className='text-sm text-muted-foreground'>Mensagens nas últimas 24h</p>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle className='flex items-center justify-between text-base'>
-                    <span>Fila de Espera</span>
-                    <Clock className="h-5 w-5 text-muted-foreground" />
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-4xl font-bold">{dailyStats.inQueue}</p>
-                 <p className='text-sm text-muted-foreground'>Aguardando envio</p>
-            </CardContent>
-        </Card>
-        <Card className={dailyStats.errorRate > 5 ? 'border-destructive/50 bg-destructive/10' : ''}>
-            <CardHeader>
-                <CardTitle className='flex items-center justify-between text-base'>
-                    <span>Taxa de Erro</span>
-                    <XCircle className={`h-5 w-5 ${dailyStats.errorRate > 5 ? 'text-destructive' : 'text-muted-foreground'}`} />
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className={`text-4xl font-bold ${dailyStats.errorRate > 5 ? 'text-destructive' : ''}`}>{dailyStats.errorRate.toFixed(1)}%</p>
-                <p className='text-sm text-muted-foreground'>Falhas de envio hoje</p>
-            </CardContent>
-        </Card>
-        <Card>
-             <CardHeader>
+        {/* Special Gradient Card */}
+        <div className="relative p-[2px] rounded-xl bg-gradient-to-r from-blue-400 to-green-300 shadow-sm hover:shadow-md transition-shadow duration-300">
+            <div className="h-full w-full bg-card dark:bg-slate-900 rounded-lg">
+                <CardHeader className="pb-2">
+                    <CardTitle className='flex items-center justify-between text-base'>
+                        <span>Envios Hoje</span>
+                        <MessageSquareText className="h-5 w-5 text-muted-foreground" />
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{dailyStats.sentToday}</p>
+                    <p className='text-sm text-muted-foreground'>Mensagens nas últimas 24h</p>
+                </CardContent>
+            </div>
+        </div>
+
+        <StatCard
+            title="Fila de Espera"
+            value={dailyStats.inQueue}
+            description="Aguardando envio"
+            icon={<Clock />}
+        />
+
+        <StatCard
+            title="Taxa de Erro"
+            value={`${dailyStats.errorRate.toFixed(1)}%`}
+            description="Falhas de envio hoje"
+            icon={<XCircle />}
+            isError={dailyStats.errorRate > 5}
+        />
+
+        <Card className="border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow duration-300">
+             <CardHeader className="pb-2">
                 <CardTitle className='flex items-center justify-between text-base'>
                     <span>Limite de Segurança</span>
                     <TriangleAlert className="h-5 w-5 text-muted-foreground" />
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-2xl font-bold mb-2">{`${dailyStats.sentToday}/${dailyStats.dailyLimit}`}</p>
+                <p className="text-2xl font-bold mb-2 tracking-tight text-slate-900 dark:text-slate-50">{`${dailyStats.sentToday}/${dailyStats.dailyLimit}`}</p>
                 <Progress value={(dailyStats.sentToday / dailyStats.dailyLimit) * 100} className='h-3' />
                  <p className='text-sm text-muted-foreground mt-2'>Cota de envios diária</p>
             </CardContent>
@@ -151,7 +161,7 @@ export default function DashboardPage() {
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-            <Card>
+            <Card className="shadow-sm">
                 <CardHeader>
                     <CardTitle>Desempenho da Semana</CardTitle>
                     <CardDescription>Envios bem-sucedidos vs. falhas nos últimos 7 dias.</CardDescription>
@@ -170,7 +180,7 @@ export default function DashboardPage() {
             </Card>
         </div>
         <div className="lg:col-span-1">
-          <Card>
+          <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>Últimos Envios</CardTitle>
                 <CardDescription>Mini-histórico das últimas 5 mensagens processadas.</CardDescription>
