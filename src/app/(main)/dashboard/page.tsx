@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { PageHeader, PageHeaderHeading } from '@/components/page-header';
 import {
   Card,
@@ -69,17 +69,17 @@ export default function DashboardPage() {
     const campaignsData = allCampaigns || [];
 
     const dailyStats = {
-        sentToday: campaignsData.filter(c => c.status === 'Sent' && isToday(parseISO(c.sentDate))).length,
+        sentToday: campaignsData.filter(c => c.status === 'Sent' && c.sentDate && isToday(parseISO(c.sentDate))).length,
         inQueue: campaignsData.filter(c => c.status === 'Scheduled').length,
-        errorRate: campaignsData.filter(c => isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length > 0 ?
-            (campaignsData.filter(c => isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length / campaignsData.filter(c => isToday(parseISO(c.sentDate))).length) * 100
+        errorRate: campaignsData.filter(c => c.sentDate && isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length > 0 ?
+            (campaignsData.filter(c => c.sentDate && isToday(parseISO(c.sentDate)) && c.status !== 'Sent').length / campaignsData.filter(c => c.sentDate && isToday(parseISO(c.sentDate))).length) * 100
             : 0,
         dailyLimit: 300,
     };
 
     const weeklyPerformance = Array.from({ length: 7 }).map((_, i) => {
         const date = subDays(new Date(), i);
-        const sentOnDay = campaignsData.filter(c => c.sentDate.startsWith(format(date, 'yyyy-MM-dd')));
+        const sentOnDay = campaignsData.filter(c => c.sentDate && c.sentDate.startsWith(format(date, 'yyyy-MM-dd')));
         return {
             day: format(date, 'EEE', { locale: ptBR }),
             success: sentOnDay.filter(c => c.status === 'Sent').length,
