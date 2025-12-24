@@ -50,57 +50,77 @@ const tourSteps = [
   },
 ];
 
+const LOCAL_STORAGE_KEY = 'welcomeTourCompleted';
+
 export function WelcomeTour() {
   const [isOpen, setIsOpen] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const router = useRouter();
 
+  // Check on mount if the tour should be shown.
   useEffect(() => {
-    try {
-      const tourCompleted = localStorage.getItem('welcomeTourCompleted');
-      if (!tourCompleted) {
-        setIsOpen(true);
-      }
-    } catch (error) {
+    // Ensure code runs only on the client where localStorage is available.
+    if (typeof window !== 'undefined') {
+      try {
+        const tourCompleted = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (!tourCompleted) {
+          setIsOpen(true);
+        }
+      } catch (error) {
         console.warn("Could not access localStorage. Welcome tour will not be shown.", error);
+      }
     }
   }, []);
 
+  // Update slide counter when carousel API is ready.
   useEffect(() => {
     if (!api) return;
-    setCurrent(api.selectedScrollSnap() + 1);
-    api.on('select', () => {
+
+    const updateCurrentSlide = () => {
       setCurrent(api.selectedScrollSnap() + 1);
-    });
+    };
+
+    updateCurrentSlide();
+    api.on('select', updateCurrentSlide);
+    
+    return () => {
+      api.off('select', updateCurrentSlide);
+    };
   }, [api]);
   
-  const handleClose = (completed: boolean) => {
+  // Marks the tour as completed and closes the dialog.
+  const completeTour = () => {
     try {
-        if (completed) {
-            localStorage.setItem('welcomeTourCompleted', 'true');
-        }
+      localStorage.setItem(LOCAL_STORAGE_KEY, 'true');
     } catch (error) {
-        console.warn("Could not access localStorage to save tour state.", error);
+      console.warn("Could not access localStorage to save tour state.", error);
     }
     setIsOpen(false);
   };
   
+  // Handles clicks on the main action button for each step.
   const handleActionClick = () => {
     const step = tourSteps[current - 1];
-    if (step && step.href) {
-        handleClose(true);
-        router.push(step.href);
+    if (step?.href) {
+      router.push(step.href);
     }
+    // Always complete the tour when an action is taken.
+    completeTour();
   };
 
+  // Skip the tour entirely.
+  const handleSkip = () => {
+    completeTour();
+  };
 
   if (!isOpen) {
     return null;
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => handleClose(true)}>
+    // The onOpenChange prop handles closing via 'X' or overlay click.
+    <Dialog open={isOpen} onOpenChange={(open) => !open && completeTour()}>
       <DialogContent className="max-w-md p-0">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-2xl text-center">Bem-vindo ao TOPzap!</DialogTitle>
@@ -147,7 +167,7 @@ export function WelcomeTour() {
           </div>
         </Carousel>
         <DialogFooter className="sm:justify-between px-6 pb-6 border-t pt-4">
-            <Button variant="link" onClick={() => handleClose(true)}>Pular Tour</Button>
+            <Button variant="link" onClick={handleSkip}>Pular Tour</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
